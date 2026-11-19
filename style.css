@@ -383,3 +383,5 @@ h1, h2 { font-family: var(--serif); }
   .edit-item > span { max-width: 52px; }
   .edit-item > button { min-width: 34px; }
 }
+.studio-link { color: #ffe3ad; font-weight: 650; text-underline-offset: 4px; white-space: nowrap; }
+@media (min-width:781px) and (max-width:1120px) { .masthead-actions .save-state { display:none; } }

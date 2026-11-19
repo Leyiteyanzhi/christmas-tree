@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#172d26"><title>Snow Window · 3D Ornament Studio</title><link rel="icon" href="../assets/star.webp"><link rel="stylesheet" href="./studio.css"><script type="module" src="./studio.js"></script></head>
+<body><main>
+<header><div><a href="../">← Snow Window · 2D studio</a><h1>3D Ornament Studio</h1></div><button id="photo" disabled>Save photo</button></header>
+<div class="workspace">
+<section class="scene" aria-label="Christmas tree miniature">
+<canvas id="view" aria-label="Tree turntable. Drag to turn the tree. Choose an ornament, then tap a glowing spot."></canvas>
+<div class="scene-tools"><button id="turn" aria-pressed="true" disabled>Turn tree</button><button id="edit" aria-pressed="false" disabled>Edit ornaments</button></div>
+<div class="zoom"><button id="less" aria-label="Zoom out" disabled>−</button><button id="home" disabled>Reset view</button><button id="more" aria-label="Zoom in" disabled>+</button></div>
+</section>
+<aside><h2>Ornament box</h2><div id="palette"></div>
+<fieldset><legend>Tree lights</legend><div class="row" id="lights"><button data-light="off" disabled>Off</button><button data-light="warm" disabled>Warm</button><button data-light="colour" disabled>Colour</button></div></fieldset>
+<div class="row actions"><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="remove" disabled>Remove</button></div>
+<p id="hint" role="status">Opening the cabin…</p><small id="saved"></small></aside></div>
+</main></body></html>
