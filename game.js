@@ -11,7 +11,7 @@ const photo = $('#photo');
 const dialog = $('#photo-dialog');
 const helpDialog = $('#help-dialog');
 $('#show-help').onclick = () => helpDialog.showModal();
-const categories = { all: '全部', ball: '彩球', hanging: '挂件', topper: '树顶', floor: '树下' };
+const categories = { all: 'All', ball: 'Baubles', hanging: 'Hangings', topper: 'Toppers', floor: 'Under tree' };
 const storeKey = 'snow-window-v1';
 const clamp = (number, low, high) => Math.max(low, Math.min(high, number));
 const button = (label, data, image) => {
@@ -40,6 +40,11 @@ let moving = null;
 let marker = null;
 let camera = { zoom: 1, dx: 0, dy: 0 };
 let photoMode = 'full';
+let depthMode = false;
+let tilt = 0;
+let tiltTarget = 0;
+let swayClock = 0;
+let depthFrame = 0;
 let width = 1;
 let height = 1;
 let dpr = 1;
@@ -48,7 +53,7 @@ const histories = {};
 const current = () => drafts[activeTree];
 const history = () => histories[activeTree];
 
-const defaultHint = '选一件饰品，再点树枝挂上去。';
+const defaultHint = 'Pick an ornament, then tap a branch to hang it.';
 function say(message = defaultHint) {
   $('#scene-hint').textContent = message;
 }
@@ -56,9 +61,9 @@ function say(message = defaultHint) {
 function save() {
   try {
     localStorage.setItem(storeKey, JSON.stringify({ activeTree, drafts }));
-    $('#save-state').textContent = '草稿已保存';
+    $('#save-state').textContent = 'Draft saved';
   } catch {
-    $('#save-state').textContent = '草稿暂存于此页';
+    $('#save-state').textContent = 'Draft kept on this page';
   }
 }
 
@@ -96,8 +101,43 @@ function draw() {
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     renderScene(context, activeTree, current(), viewFor(), {
       selected, moving, marker, ghost: ghost?.item, valid: ghost?.valid,
+      depth: depthMode, tilt,
     });
   });
+}
+
+function setDepthMode(on) {
+  depthMode = on;
+  picture.classList.toggle('depth-on', on);
+  $('#toggle-depth').setAttribute('aria-pressed', on);
+  if (!on) {
+    tilt = 0;
+    tiltTarget = 0;
+    cancelAnimationFrame(depthFrame);
+    depthFrame = 0;
+  } else if (!depthFrame) {
+    swayClock = performance.now();
+    tickDepth();
+  }
+  say(on ? '2.5D on: move the pointer and the background shifts gently while the tree and ornaments stay together.' : defaultHint);
+  draw();
+}
+
+function tickDepth(now = performance.now()) {
+  if (!depthMode) {
+    depthFrame = 0;
+    return;
+  }
+  const sway = Math.sin((now - swayClock) / 1800) * .12;
+  const follow = pointers.size || gesture ? tiltTarget : tiltTarget * .55 + sway;
+  tilt += (follow - tilt) * .1;
+  draw();
+  depthFrame = requestAnimationFrame(tickDepth);
+}
+
+function aimTilt(point) {
+  if (!depthMode) return;
+  tiltTarget = clamp((point.x / width - .5) * 1.1, -.55, .55);
 }
 
 function resize() {
@@ -146,7 +186,7 @@ function updatePanels() {
   $('#redo').disabled = !history().redo.length;
   $('#placement').hidden = !placing;
   canvas.classList.toggle('placing', Boolean(placing));
-  if (placing) $('#placement-name').textContent = '摆放 ' + items[placing].name;
+  if (placing) $('#placement-name').textContent = 'Placing ' + items[placing].name;
   const item = current().items.find(entry => entry.id === selected);
   $('#edit-item').hidden = !item || Boolean(placing);
   if (item) {
@@ -174,7 +214,7 @@ function travel(direction) {
   history()[direction === 'undo' ? 'redo' : 'undo'].push(current());
   drafts[activeTree] = states.pop();
   resetSelection();
-  say(direction === 'undo' ? '已撤销。' : '已重做。');
+  say(direction === 'undo' ? 'Undone.' : 'Redone.');
   save();
   updatePanels();
 }
@@ -196,7 +236,7 @@ function removeSelected() {
   const id = selected;
   selected = null;
   commit({ ...current(), items: current().items.filter(item => item.id !== id) });
-  say('已移除饰品，可以撤销。');
+  say('Ornament removed. You can undo.');
 }
 
 function chooseTree(key) {
@@ -214,16 +254,16 @@ function chooseItem(key) {
   if (!ready) return;
   resetSelection();
   placing = key;
-  say(isTopper(key) ? '点树尖附近，饰品会吸附到树顶。' : isFloor(key)
-    ? '点树脚附近，把装饰沿地面摆放。'
-    : '点树枝摆放。可以连续挂同款。');
+  say(isTopper(key) ? 'Tap near the tip and it will snap to the top.' : isFloor(key)
+    ? 'Tap near the base to place it along the floor.'
+    : 'Tap a branch to hang it. You can place the same item again.');
   updatePanels();
 }
 
 function paintInventory() {
   for (const opt of document.querySelectorAll('[data-category]')) opt.setAttribute('aria-pressed', opt.dataset.category === category);
   const catalog = Object.entries(items).filter(([, item]) => category === 'all' || item.category === category);
-  $('#material-count').textContent = catalog.length + ' 件';
+  $('#material-count').textContent = catalog.length + ' items';
   $('#item-options').replaceChildren(...catalog.map(([key, item]) => {
     const opt = button(item.name, { item: key }, key);
     opt.className = 'item-option';
@@ -254,7 +294,7 @@ for (const [key, backdrop] of Object.entries(backdrops)) {
   opt.onclick = () => {
     if (!ready || current().backdrop === key) return;
     commit({ ...current(), backdrop: key });
-    say('已切换到' + backdrop.name + '。');
+    say('Switched to ' + backdrop.name + '.');
   };
   $('#backdrop-options').append(opt);
 }
@@ -272,7 +312,7 @@ for (const [key, name] of Object.entries(categories)) {
 for (const [key, item] of Object.entries(items)) {
   if (!item.color) continue;
   const opt = button('', { color: key });
-  opt.title = '换成' + item.name;
+    opt.title = 'Change to ' + item.name;
   opt.setAttribute('aria-label', opt.title);
   opt.style.setProperty('--swatch', item.color);
   opt.onclick = () => {
@@ -295,18 +335,18 @@ function worldAt(point) {
 function place(point) {
   const location = anchorPoint(activeTree, placing, point);
   if (!location) {
-    say(isTopper(placing) ? '树顶饰品需要靠近树尖。' : isFloor(placing) ? '树下装饰需要靠近树脚。' : '这里挂不上，试试靠近枝叶。');
+    say(isTopper(placing) ? 'Tree toppers need a spot near the tip.' : isFloor(placing) ? 'Floor pieces need a spot near the base.' : 'That spot will not hold. Try closer to the needles.');
     return;
   }
   const previous = isTopper(placing) ? current().items.filter(item => !isTopper(item.key)) : current().items;
   const id = globalThis.crypto?.randomUUID?.() ?? String(Date.now()) + '-' + Math.random();
   commit({ ...current(), items: [...previous, { id, key: placing, ...location, angle: 0 }] });
-  say('已摆放' + items[placing].name + '。');
+  say('Placed ' + items[placing].name + '.');
 }
 
 function choosePlaced(item) {
   selected = item?.id ?? null;
-  say(item ? '拖动微调，长按可选重叠饰品。' : defaultHint);
+  say(item ? 'Drag to fine-tune. Press and hold to pick overlapping ornaments.' : defaultHint);
   updatePanels();
 }
 
@@ -318,7 +358,7 @@ function showOverlap(list, pos) {
   const menu = $('#overlap');
   menu.replaceChildren(...list.map(item => {
     const opt = button('', { placed: item.id }, item.key);
-    opt.title = '选择' + items[item.key].name;
+    opt.title = 'Select ' + items[item.key].name;
     opt.setAttribute('aria-label', opt.title);
     opt.onclick = () => {
       closeOverlap();
@@ -331,7 +371,7 @@ function showOverlap(list, pos) {
   const wantedWidth = Math.min(menu.scrollWidth, width - 18);
   menu.style.left = clamp(pos.x - wantedWidth / 2, 9, Math.max(9, width - wantedWidth - 9)) + 'px';
   menu.style.top = (pos.y < 115 ? pos.y + 16 : Math.max(55, pos.y - 57)) + 'px';
-  say('选择想要移动的饰品。');
+  say('Choose the ornament you want to move.');
 }
 
 const pointers = new Map();
@@ -387,6 +427,7 @@ canvas.addEventListener('pointerdown', event => {
 canvas.addEventListener('pointermove', event => {
   if (!ready) return;
   const point = pointAt(event);
+  aimTilt(point);
   if (pointers.has(event.pointerId)) pointers.set(event.pointerId, point);
   if (pinch && pointers.size >= 2) {
     const next = pair();
@@ -439,7 +480,7 @@ function endPointer(event, canceled) {
   if (gesture && !gesture.held && !canceled) {
     if (gesture.dragged) {
       if (moving && gesture.valid) edit(moving);
-      if (moving && !gesture.valid) say('请把饰品放回适合的位置。');
+      if (moving && !gesture.valid) say('Move the ornament back to a valid spot.');
     } else if (placing) place(worldAt(pointAt(event)));
     else choosePlaced(gesture.item);
   }
@@ -521,6 +562,7 @@ $('#redo').onclick = () => travel('redo');
 $('#zoom-in').onclick = () => zoomAround(camera.zoom * 1.25);
 $('#zoom-out').onclick = () => zoomAround(camera.zoom / 1.25);
 $('#reset-view').onclick = () => setCamera(1, 0, 0);
+$('#toggle-depth').onclick = () => setDepthMode(!depthMode);
 $('#remove').onclick = removeSelected;
 $('#rotate').onclick = () => {
   const item = current().items.find(entry => entry.id === selected);
@@ -536,9 +578,9 @@ function replaceWith(next, message) {
   say(message);
 }
 
-$('#empty-tree').onclick = () => replaceWith({ light: 'off', items: [] }, '已清空这棵树，可以撤销。');
+$('#empty-tree').onclick = () => replaceWith({ light: 'off', items: [] }, 'Tree cleared. You can undo.');
 $('#starter-tree').onclick = () => {
-  if (ready) replaceWith(starter(activeTree), '已换成半成品，可以撤销。');
+  if (ready) replaceWith(starter(activeTree), 'Switched to a starter layout. You can undo.');
 };
 for (const opt of document.querySelectorAll('[data-light]')) {
   opt.onclick = () => {
@@ -568,7 +610,7 @@ for (const opt of document.querySelectorAll('[data-photo]')) opt.onclick = () =>
 $('#download').onclick = () => {
   photo.toBlob(blob => {
     if (!blob) {
-      $('#photo-status').textContent = '生成照片失败，请再试一次。';
+      $('#photo-status').textContent = 'Could not create the photo. Please try again.';
       $('#photo-status').hidden = false;
       return;
     }
@@ -594,6 +636,6 @@ try {
   save();
   new ResizeObserver(resize).observe(picture);
 } catch (error) {
-  $('#loading').textContent = '素材加载失败，请刷新后重试。';
+  $('#loading').textContent = 'Art failed to load. Refresh and try again.';
   console.error(error);
 }

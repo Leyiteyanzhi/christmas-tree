@@ -1,64 +1,66 @@
-# 雪夜窗边 · 产品需求文档
+# Snow Window · Product Requirements
 
-版本 0.2 · 2026 年 11 月 19 日
+Version 0.2 · November 19, 2026
 
-## 产品定位
+## Product positioning
 
-一款手机优先的 2D 圣诞树装饰游戏。玩家进入雪夜小屋，选一棵树，用饰品和灯光完成自己的构图，把成品保存成一张节日照片。一次游玩可以只挂几件，也可以放大仔细布置。
+A mobile-first 2D Christmas tree decorating game. Players enter a snowy cottage, pick a tree, finish a composition with ornaments and lights, and save a holiday photo. A session can be a few hangings or a careful zoomed-in arrangement.
 
-首版验证三件事。玩家能否独立挂好第一件饰品，能否在放大后调整一件小饰品，以及开灯后是否愿意保存、调整或试一棵新树。
+The first release validates three things: whether players can hang the first ornament on their own, whether they can adjust a small ornament after zooming, and whether turning the lights on makes them want to save, tweak, or try another tree.
 
-## 设计取舍
+## Design tradeoffs
 
-| 方案 | 能力与代价 | 决定 |
+| Approach | Strengths and cost | Decision |
 | --- | --- | --- |
-| 2D 分层 | 正面布局、精细缩放、透明素材复用、直接导出。树可压住挂环 | 首版采用 |
-| 2.5D 多视角 | 固定角度切换。每张树图都需要对应的挂点和前后遮挡 | 有固定角度展示需求时评估 |
-| 真 3D | 可以绕树、装饰背面。需要模型、拾取、镜头、灯路和移动端性能验证 | 当试玩者反复提出绕树布置时，先用单树挂点原型验证 |
+| 2D layers | Front layout, precise zoom, reusable transparent art, direct export. Tree can cover hang points | Used for v1 |
+| 2.5D multi-angle | Fixed angle switches. Every tree image needs matching hang points and occlusion | Evaluate when fixed-angle showcase is needed |
+| True 3D | Walk around the tree and decorate the back. Needs models, picking, camera, light paths, and mobile performance checks | If players repeatedly ask to decorate around the tree, prototype one tree with hang points first |
 
-## 用户流程
+A lightweight 2.5D preview is available in the studio: background parallax only, with the tree and ornaments locked together.
 
-1. 直接进入装饰台。初始为宽冠松树的半成品，也可用「空树」从头开始。
-2. 在三棵树之间切换。每棵树独立记录布置，返回时恢复。
-3. 从材料盘选择饰品并点击树冠摆放。当前材料继续选中，可连挂同款。点「完成摆放」或按 Esc 后，即可选择、移动、旋转、换色或删除已挂饰品。重叠处长按可挑选底层饰品。
-4. 用画布按钮、鼠标滚轮或双指缩放。双指移动画布，桌面可拖动空白区域。放大和回全景都只改变视角。
-5. 在雪夜木屋、雪村集市和姜饼烘焙屋之间切换。可看一张可跳过的「复古金红」灵感卡，再试暖白灯、彩灯或关灯。
-6. 拍照时在「全景」与「当前视角」之间切换，先看裁切再下载 PNG，可返回继续编辑。
+## User flow
 
-## 首版交付范围
+1. Enter the studio directly. Start with a full-pine starter layout, or begin from an empty tree.
+2. Switch among three trees. Each tree keeps its own layout and restores when you return.
+3. Pick an ornament from the tray and tap the crown to place it. The current item stays selected for repeats. After Done placing or Esc, select, move, rotate, recolor, or delete placed ornaments. Press and hold on overlaps to pick a lower item.
+4. Zoom with canvas buttons, mouse wheel, or pinch. Pinch also pans; on desktop, drag empty space. Zoom and reset only change the view.
+5. Switch among Snowy Cabin, Village Market, and Gingerbread Bakery. Optionally open a skippable vintage gold-and-red tip, then try warm white, colored, or off lights.
+6. For photos, choose Full view or Current view, preview the crop, download a PNG, and return to editing.
 
-| 模块 | 需求 |
+## First-release scope
+
+| Module | Requirement |
 | --- | --- |
-| 树与场景 | 雪夜木屋、雪村集市、姜饼烘焙屋可自由搭配。宽冠松树、瘦高冷杉、覆雪云杉有不同冠幅和有效范围 |
-| 材料 | 共 28 件装饰，含 6 色彩球、13 件挂件、3 个树顶饰品和 6 件树下摆设。分类显示，除树顶饰品外允许重复摆放 |
-| 摆放 | 挂饰用实际挂点判断位置，近枝叶时轻度吸附。树顶饰品吸附至树尖，每棵只保留一个。礼物和摆件沿地面排列。拖动预览和松手结果一致 |
-| 编辑 | 对已放饰品提供移动、旋转和删除，圆球提供六色替换。支持撤销、重做和重叠选择。空树与半成品可通过撤销恢复 |
-| 灯光 | 每棵树有对应的预设灯路线。支持关灯、暖白和彩灯，默认常亮，照片呈现当前灯色 |
-| 草稿 | 同一浏览器保存每棵树的饰品位置、顺序、灯光和场景。刷新后恢复当前树和作品。撤销历史仅保留当次会话 |
-| 照片 | 全景默认包含完整场景和树下礼物。当前视角按画布比例裁切，导出画面包含所选场景、布置和灯光 |
-| 自适应 | 桌面左侧树型、右侧材料、中间场景。手机上树型和材料在纵向布局中可触达，缩放不会导致页面横向溢出 |
+| Trees and scenes | Freely pair Snowy Cabin, Village Market, and Gingerbread Bakery. Full pine, tall fir, and snowy spruce have different crowns and valid areas |
+| Materials | 28 ornaments: 6 baubles, 13 hangings, 3 toppers, and 6 floor pieces. Shown by category; toppers are unique per tree, others may repeat |
+| Placement | Hangings use real hang-point checks with light snap near needles. Toppers snap to the tip, one per tree. Gifts and floor pieces align along the ground. Drag preview matches release |
+| Editing | Move, rotate, and delete placed items; baubles have six color swaps. Undo, redo, and overlap picking. Empty and starter layouts can be undone |
+| Lights | Each tree has a preset string path. Off, warm, and color modes; photos show the current look |
+| Drafts | Same browser stores each tree’s ornaments, order, lights, and scene. Refresh restores the active tree and work. Undo history is session-only |
+| Photos | Full view includes the full scene and floor gifts. Current view crops to the canvas; export includes scene, layout, and lights |
+| Responsive | Desktop: trees left, materials right, scene center. On phones, trees and materials stay reachable in a stacked layout without horizontal overflow |
 
-计时、评分、货币、解锁、自由绕灯、动画音效、登录、在线作品链接、用户上传素材和 3D 均留待后续验证。首版一个浏览器可维护三棵树的草稿，同一树型的多个作品槽与复制功能放到下一阶段。
+Timers, scoring, currency, unlocks, free string wrapping, animation audio, accounts, online share links, user uploads, and full 3D wait for later validation. One browser keeps three tree drafts in v1; multiple slots per tree shape and copy come later.
 
-## 后续验证
+## Follow-up validation
 
-- 布置过程中如果频繁往返材料分类，可增加「最近使用」，保留红球、金球交替摆放的便利。
-- 用姜饼配色、银蓝雪景补充主题卡。观察不同主题是否让玩家改变材料选择和留白习惯。
-- 有多人分享需求时，评估竖版照片、同树型多作品槽和可继续编辑的作品链接。分享链接需要额外存储和访问权限设计。
-- 收集首次摆放耗时、缩放后操作是否成功、照片保存和第二次布置意愿。首轮通过现场观察和试玩反馈收集。
+- If players bounce between material categories often, add Recently used for alternating red and gold baubles.
+- Add gingerbread and silver-blue theme cards. Watch whether themes change material choices and negative space.
+- If sharing matters, evaluate vertical photos, multiple slots per tree shape, and editable share links. Links need storage and access design.
+- Collect time to first hang, success after zoom, photo saves, and willingness to decorate again. First round from live observation and playtests.
 
-## 美术方案
+## Art direction
 
-选用复古绘本风。软陶风可以突出玩具感，但对跨素材光泽和投影的一致性要求较高。写实橱窗风擅长呈现成品摄影效果，但松针细节和高光会影响小挂件的辨识。
+Use a vintage picture-book look. Soft-clay can feel toy-like but needs consistent gloss and shadow across assets. Realistic shop-window looks photograph well but needle detail and highlights hurt small-ornament readability.
 
-界面采用酒红贺卡底、松绿面板、暖金边框和点灯松枝。场景用冷绿木屋、靛蓝雪村与暖红烘焙屋提供不同的光色和布置氛围。树用不同轮廓提供布置差异，饰品靠剪影和明暗在全景中区分。景深由背景、树底、灯线、饰品和局部枝叶遮挡组成。检查小饰品时先看手机全景，再检查放大后的边缘。
+UI uses a wine-card ground, pine-green panels, warm gold frames, and lit pine branches. Scenes use cool-green cabin, indigo village, and warm bakery for different light moods. Tree silhouettes create placement variety; ornaments read by silhouette and value in full view. Depth comes from background, tree base, light string, ornaments, and local needle occlusion. Check small ornaments in phone full view, then at zoomed edges.
 
-素材使用内置 ImageGen 创建场景、松枝、树型和饰品源图，再切出独立的 WebP。灯泡、光晕和挂点逻辑由程序绘制和控制。生成规格见 [素材记录](art-direction.md)。
+Art is generated with built-in ImageGen for scenes, pine branches, trees, and ornament sheets, then cut to independent WebP files. Bulbs, glow, and hang logic are drawn in code. Specs live in [art notes](art-direction.md).
 
-## 验收
+## Acceptance
 
-- 在手机尺寸下挂一个蝴蝶结和一颗球，让它们部分重叠。放大并选到底下的球，挪动后撤销，再恢复全景。
-- 点中树冠外较远的位置，普通挂件保持原状态。点在树尖和地面附近时，分别检查星星和礼物吸附。
-- 为三棵树分别布置，来回切换并刷新，确认饰品、树型、灯光和场景恢复。
-- 打开拍照，确认全景、当前视角可预览，下载后的 PNG 像预览一样含树顶与地面。
-- 在桌面和移动端宽度下检查材料盘、按钮焦点和画布。用触控模拟验证双指缩放和平移，真机试玩用于后续观察手感。
+- On a phone-size canvas, hang a bow and a bauble so they partly overlap. Zoom, select the lower bauble, move it, undo, then return to full view.
+- Tap far outside the crown; normal hangings stay put. Near the tip and floor, check star and gift snapping.
+- Decorate all three trees, switch among them, refresh, and confirm ornaments, tree, lights, and scene restore.
+- Open Photo and confirm Full view and Current view previews; the downloaded PNG matches, including top and floor.
+- Check materials, button focus, and canvas on desktop and mobile widths. Simulate pinch zoom and pan; real-device playtests come later for feel.

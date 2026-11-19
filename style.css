@@ -192,7 +192,20 @@ h1, h2 { font-family: var(--serif); }
 .loading { position: absolute; top: 50%; inset-inline: 0; text-align: center; color: var(--card); pointer-events: none; padding-inline: 20px; }
 .scene-top, .scene-bottom { position: absolute; display: flex; }
 .scene-top { top: 14px; left: 14px; }
-.scene-bottom { bottom: 14px; right: 14px; }
+.scene-bottom { bottom: 14px; right: 14px; gap: 8px; }
+.picture.depth-on {
+  box-shadow: 0 0 0 3px #2d201fa0, 0 18px 40px #1a0a128f, inset 0 -18px 40px #00000022;
+}
+.depth-controls #toggle-depth {
+  min-width: 52px;
+  font-size: 12px;
+  letter-spacing: .04em;
+  font-weight: 700;
+}
+.depth-controls #toggle-depth[aria-pressed="true"] {
+  background: #fff0cb30;
+  color: #ffe7b0;
+}
 .glass { background: #132923ef; color: #fff5df; border: 1px solid #f4d79765; border-radius: 8px; display: flex; align-items: center; }
 .glass button {
   display: grid;

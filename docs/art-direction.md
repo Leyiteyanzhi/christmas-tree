@@ -1,22 +1,22 @@
-# 游戏素材记录
+# Art asset notes
 
-素材由内置 ImageGen 生成。场景保持横向全幅，三棵树和十二件饰品由源图切出并保留透明通道。所有运行资源位于 `assets/`。
+Assets were generated with built-in ImageGen. Scenes stay full-width landscape. The three trees and ornament sheets were cut from source images with alpha preserved. Runtime files live in `assets/`.
 
-## 场景源图
+## Scene source
 
-复古儿童绘本水粉画，横向 3:2。正视圣诞夜木屋，左侧窗外是蓝色雪夜和远处灯火，右侧暖色炉火与一只袜子。中央预留空的深青绿色墙面和木地面用于放置树。手工纸纹，煤蓝、松绿、赭金和暗朱红。室内无树，无人物或文字。
+Vintage children’s picture-book gouache, landscape 3:2. Front view of a Christmas-night cottage: blue snow night and distant lights through the left window, warm hearth and one stocking on the right. Leave empty deep teal wall and wood floor in the center for the tree. Handmade paper texture; coal blue, pine green, ochre gold, and dark crimson. No tree indoors, no people or text.
 
-## 树型源图
+## Tree source
 
-透明背景的三棵正视无装饰树。左侧为宽冠松树，中间为瘦高冷杉，右侧为部分枝叶覆雪的云杉。每棵保留树尖、枝叶和小柳编篮，彼此分隔。复古绘本水粉笔触，左上方暖光，枝条轮廓清楚，无文字或投影。
+Three undecorated front-facing trees on transparent backgrounds. Left: full pine. Center: tall fir. Right: spruce with snow on some tips. Keep tip, needles, and a small willow basket on each, separated from one another. Vintage picture-book brushwork, warm light from upper left, clear branch outlines, no text or drop shadow.
 
-## 饰品源图
+## Ornament source
 
-透明背景的 4×3 饰品图集，统一水粉手绘、正视和左上高光。第一排为红、金、冰蓝圆球与红丝绒结。第二排为浮雕金星、奶白纸雪花、冰蓝玻璃冰柱和姜饼人。第三排为木铃、红礼盒、绿礼盒和干橙片。每件独立留出空边，小图依然能辨认形状。
+Transparent 4×3 ornament sheet with unified gouache, front view, and upper-left highlights. Row 1: red, gold, ice-blue baubles and a red velvet bow. Row 2: embossed gold star, cream paper snowflake, ice-blue glass icicle, and gingerbread figure. Row 3: wooden bell, red gift, green gift, and dried orange. Keep empty margin around each so shapes stay readable when small.
 
-## 节日界面和扩充场景
+## Holiday UI and extra scenes
 
-- 页眉松枝使用独立透明图。横向松枝由左侧向右逐渐收尖，以冬青红果、丝绒红结和暖色小灯补充酒红界面。
-- 雪村集市使用 3:2 正面构图。两侧是有彩棚和灯串的木屋，中央留出低对比靛蓝天空和积雪广场，便于布置深绿或覆雪树。
-- 姜饼烘焙屋使用同一画幅。两侧是壁炉、糖果、烘焙架和雪窗。中央预留陶红色墙面和木地面，用于合成圣诞树和摆件。
-- 扩充饰品为 4×4 透明图集。第一排是松绿、霜银、玫瑰粉彩球和糖果拐杖。第二排是木摇马、姜饼爱心、玩具鼓和红雀。第三排是冬青花环、金松果、木雕天使和冰晶银星。第四排是胡桃夹子、姜饼小屋、奶油色礼盒和格纹礼盒。保持手绘水粉质感和统一高光方向。
+- Header pine is a separate transparent strip. The branch tapers left to right, with holly berries, a velvet red bow, and warm bulbs for the wine UI.
+- Village Market uses a 3:2 front composition. Timber stalls with awnings and light strings on both sides; leave a low-contrast indigo sky and snow square in the center for a deep-green or snowy tree.
+- Gingerbread Bakery uses the same frame. Fireplace, candy, baking racks, and snow windows on the sides; reserve terracotta wall and wood floor in the center for the tree and floor pieces.
+- Extra ornaments are a 4×4 transparent sheet. Row 1: pine-green, frost-silver, rose baubles and a candy cane. Row 2: rocking horse, gingerbread heart, toy drum, and cardinal. Row 3: holly wreath, gold pinecone, carved angel, and crystal silver star. Row 4: nutcracker, gingerbread house, cream gift, and tartan gift. Keep hand-painted gouache and a shared highlight direction.

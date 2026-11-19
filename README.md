@@ -1,11 +1,11 @@
-# 雪夜窗边
+# Snow Window
 
-在绘本雪夜里布置圣诞树。支持三种树型、雪夜木屋等三套场景、二十八件饰品、缩放与精细摆放、灯光、浏览器草稿和 PNG 导出。
+Decorate a Christmas tree in a picture-book snowy night. Choose from three tree shapes, three scenes, twenty-eight ornaments, zoom and fine placement, lights, browser drafts, and PNG export. Optional 2.5D view adds a gentle background parallax.
 
-## 试玩
+## Play locally
 
-在项目目录运行 `python3 -m http.server 4173 --bind 127.0.0.1`，打开 <http://127.0.0.1:4173>。网页使用原生 HTML、CSS、JavaScript 和 Canvas，素材随项目提供。
+From the project folder run `python3 -m http.server 4173 --bind 127.0.0.1`, then open <http://127.0.0.1:4173>. The page uses plain HTML, CSS, JavaScript, and Canvas with bundled assets.
 
-选一件饰品后点击树即可放置。点「完成摆放」可编辑已挂上去的饰品，长按重叠处可以挑选。桌面支持滚轮缩放和空白处拖动，触屏支持双指缩放和平移。
+Pick an ornament, then tap the tree to place it. Tap Done placing to edit ornaments already on the tree; press and hold on overlaps to choose one. Desktop supports scroll zoom and dragging empty space; touch supports pinch zoom and pan.
 
-[产品需求文档](docs/product-requirements.md) · [素材记录](docs/art-direction.md)
+[Product requirements](docs/product-requirements.md) · [Art notes](docs/art-direction.md)

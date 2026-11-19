@@ -3,45 +3,45 @@ export const HEIGHT = 800;
 export const CENTER = 616;
 export const FLOOR = 728;
 export const backdrops = {
-  room: { name: '雪夜木屋', shadow: '#160d07' },
-  market: { name: '雪村集市', shadow: '#20315e' },
-  bakery: { name: '姜饼烘焙屋', shadow: '#442013' },
+  room: { name: 'Snowy Cabin', shadow: '#160d07' },
+  market: { name: 'Village Market', shadow: '#20315e' },
+  bakery: { name: 'Gingerbread Bakery', shadow: '#442013' },
 };
 export const trees = {
-  pine: { name: '宽冠松树', description: '枝冠饱满', top: 92, width: 465 },
-  fir: { name: '瘦高冷杉', description: '细长舒展', top: 68, width: 284 },
-  spruce: { name: '覆雪云杉', description: '枝梢落雪', top: 83, width: 430 },
+  pine: { name: 'Full pine', description: 'Broad crown', top: 92, width: 465 },
+  fir: { name: 'Tall fir', description: 'Slender shape', top: 68, width: 284 },
+  spruce: { name: 'Snowy spruce', description: 'Frosted tips', top: 83, width: 430 },
 };
 
 export const items = {
-  red: { name: '陶红球', category: 'ball', size: 52, color: '#b84731' },
-  gold: { name: '旧金球', category: 'ball', size: 52, color: '#b99046' },
-  blue: { name: '冰蓝球', category: 'ball', size: 52, color: '#87a5af' },
-  emerald: { name: '松绿球', category: 'ball', size: 52, color: '#266150' },
-  silver: { name: '霜银球', category: 'ball', size: 52, color: '#c9cbcf' },
-  rose: { name: '玫瑰粉球', category: 'ball', size: 52, color: '#c9888b' },
-  bow: { name: '丝绒结', category: 'hanging', size: 90, anchor: .29 },
-  cane: { name: '糖果拐杖', category: 'hanging', size: 67, anchorX: .58 },
-  star: { name: '树顶金星', category: 'topper', size: 74, anchor: .9 },
-  angel: { name: '木雕天使', category: 'topper', size: 85, anchor: .93 },
-  'ice-star': { name: '冰晶银星', category: 'topper', size: 78, anchor: .93 },
-  flake: { name: '纸雪花', category: 'hanging', size: 63 },
-  icicle: { name: '玻璃冰柱', category: 'hanging', size: 71 },
-  cookie: { name: '姜饼人', category: 'hanging', size: 61 },
-  bell: { name: '木铃', category: 'hanging', size: 66 },
-  'gift-red': { name: '红礼盒', category: 'floor', size: 80, anchor: 1 },
-  'gift-green': { name: '绿礼盒', category: 'floor', size: 72, anchor: 1 },
-  orange: { name: '干橙片', category: 'hanging', size: 57 },
-  horse: { name: '木摇马', category: 'hanging', size: 84, anchor: .16, anchorX: .57 },
-  heart: { name: '姜饼爱心', category: 'hanging', size: 63 },
-  drum: { name: '玩具鼓', category: 'hanging', size: 58 },
-  cardinal: { name: '红雀', category: 'hanging', size: 73, anchor: .18, anchorX: .56 },
-  wreath: { name: '冬青花环', category: 'hanging', size: 78, anchor: .13 },
-  pinecone: { name: '金松果', category: 'hanging', size: 69 },
-  nutcracker: { name: '胡桃夹子', category: 'floor', size: 138, anchor: 1 },
-  'gingerbread-house': { name: '姜饼小屋', category: 'floor', size: 107, anchor: 1 },
-  'gift-cream': { name: '奶油色礼盒', category: 'floor', size: 77, anchor: 1 },
-  'gift-tartan': { name: '格纹礼盒', category: 'floor', size: 84, anchor: 1 },
+  red: { name: 'Clay red bauble', category: 'ball', size: 52, color: '#b84731' },
+  gold: { name: 'Antique gold bauble', category: 'ball', size: 52, color: '#b99046' },
+  blue: { name: 'Ice blue bauble', category: 'ball', size: 52, color: '#87a5af' },
+  emerald: { name: 'Pine green bauble', category: 'ball', size: 52, color: '#266150' },
+  silver: { name: 'Frost silver bauble', category: 'ball', size: 52, color: '#c9cbcf' },
+  rose: { name: 'Rose bauble', category: 'ball', size: 52, color: '#c9888b' },
+  bow: { name: 'Velvet bow', category: 'hanging', size: 90, anchor: .29 },
+  cane: { name: 'Candy cane', category: 'hanging', size: 67, anchorX: .58 },
+  star: { name: 'Gold tree star', category: 'topper', size: 74, anchor: .9 },
+  angel: { name: 'Carved angel', category: 'topper', size: 85, anchor: .93 },
+  'ice-star': { name: 'Crystal silver star', category: 'topper', size: 78, anchor: .93 },
+  flake: { name: 'Paper snowflake', category: 'hanging', size: 63 },
+  icicle: { name: 'Glass icicle', category: 'hanging', size: 71 },
+  cookie: { name: 'Gingerbread figure', category: 'hanging', size: 61 },
+  bell: { name: 'Wooden bell', category: 'hanging', size: 66 },
+  'gift-red': { name: 'Red gift', category: 'floor', size: 80, anchor: 1 },
+  'gift-green': { name: 'Green gift', category: 'floor', size: 72, anchor: 1 },
+  orange: { name: 'Dried orange', category: 'hanging', size: 57 },
+  horse: { name: 'Rocking horse', category: 'hanging', size: 84, anchor: .16, anchorX: .57 },
+  heart: { name: 'Gingerbread heart', category: 'hanging', size: 63 },
+  drum: { name: 'Toy drum', category: 'hanging', size: 58 },
+  cardinal: { name: 'Cardinal', category: 'hanging', size: 73, anchor: .18, anchorX: .56 },
+  wreath: { name: 'Holly wreath', category: 'hanging', size: 78, anchor: .13 },
+  pinecone: { name: 'Gold pinecone', category: 'hanging', size: 69 },
+  nutcracker: { name: 'Nutcracker', category: 'floor', size: 138, anchor: 1 },
+  'gingerbread-house': { name: 'Gingerbread house', category: 'floor', size: 107, anchor: 1 },
+  'gift-cream': { name: 'Cream gift', category: 'floor', size: 77, anchor: 1 },
+  'gift-tartan': { name: 'Tartan gift', category: 'floor', size: 84, anchor: 1 },
 };
 
 export const isFloor = key => items[key]?.category === 'floor';
@@ -251,24 +251,35 @@ function drawItem(context, item, box, tree, highlighted, ghost) {
 export function renderScene(context, tree, draft, view, options = {}) {
   const { width, height, scale, x, y } = view;
   const { selected, ghost, valid = true, marker, moving } = options;
+  const tilt = Math.max(-1, Math.min(1, options.tilt ?? 0));
+  const depth = Boolean(options.depth) && Math.abs(tilt) > .002;
   const box = treeBox(tree);
   const backdrop = Object.hasOwn(backdrops, draft.backdrop) ? draft.backdrop : 'room';
+  // Parallax only: backdrop drifts farther than the locked tree+ornament layer.
+  // No skew or per-item offsets — those warped the room and made decorations float.
+  const bgShift = depth ? tilt * 22 : 0;
+  const stageShift = depth ? tilt * 7 : 0;
   context.fillStyle = '#1a3027';
   context.fillRect(0, 0, width, height);
   context.save();
   context.translate(x, y);
   context.scale(scale, scale);
   // Extend the scenery beyond the composition so camera panning has no exposed edges.
-  const edgeX = Math.min(0, -x / scale);
+  const edgeX = Math.min(0, -x / scale) - Math.abs(bgShift) - 8;
   const edgeY = Math.min(0, -y / scale);
-  const edgeR = Math.max(WIDTH, (width - x) / scale);
+  const edgeR = Math.max(WIDTH, (width - x) / scale) + Math.abs(bgShift) + 8;
   const edgeB = Math.max(HEIGHT, (height - y) / scale);
   const room = images[backdrop];
+  context.save();
+  if (depth) context.translate(bgShift, 0);
   context.drawImage(room, 0, 0, WIDTH, HEIGHT);
   if (edgeX < 0) context.drawImage(room, 0, 0, 1, room.height, edgeX, 0, -edgeX, HEIGHT);
   if (edgeR > WIDTH) context.drawImage(room, room.width - 1, 0, 1, room.height, WIDTH, 0, edgeR - WIDTH, HEIGHT);
   if (edgeY < 0) context.drawImage(room, 0, 0, room.width, 1, 0, edgeY, WIDTH, -edgeY);
   if (edgeB > HEIGHT) context.drawImage(room, 0, room.height - 1, room.width, 1, 0, HEIGHT, WIDTH, edgeB - HEIGHT);
+  context.restore();
+  context.save();
+  if (depth) context.translate(stageShift, 0);
   context.save();
   context.translate(0, FLOOR);
   context.scale(1, .27);
@@ -307,5 +318,6 @@ export function renderScene(context, tree, draft, view, options = {}) {
     context.arc(marker.x, marker.y, 9 / scale, 0, Math.PI * 2);
     context.stroke();
   }
+  context.restore();
   context.restore();
 }

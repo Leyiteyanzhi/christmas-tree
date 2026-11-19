@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#511d27">
-  <meta name="description" content="在雪夜小屋挑一棵树，挂上心仪的饰品，再拍下你的圣诞树。">
-  <title>雪夜窗边 · 圣诞树装饰台</title>
+  <meta name="description" content="Pick a tree in a snowy cottage, hang the ornaments you like, and save a photo of your Christmas tree.">
+  <title>Snow Window · Christmas Tree Studio</title>
   <link rel="icon" href="assets/star.webp">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="game.js"></script>
@@ -13,120 +13,123 @@
 <body>
   <header class="masthead">
     <div class="brand-copy">
-      <h1>雪夜窗边</h1>
-      <p>圣诞树装饰台</p>
+      <h1>Snow Window</h1>
+      <p>Christmas Tree Studio</p>
     </div>
     <div class="masthead-actions">
       <span id="save-state" class="save-state" aria-live="polite"></span>
-      <button type="button" id="show-help" class="help-button" aria-haspopup="dialog" aria-controls="help-dialog">玩法说明</button>
-      <button type="button" id="take-photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照</button>
+      <button type="button" id="show-help" class="help-button" aria-haspopup="dialog" aria-controls="help-dialog">How to play</button>
+      <button type="button" id="take-photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
     </div>
   </header>
 
   <main class="workshop">
     <aside class="trees panel" aria-labelledby="tree-title">
-      <h2 id="tree-title">挑一棵树</h2>
+      <h2 id="tree-title">Choose a tree</h2>
       <div id="tree-options" class="tree-options"></div>
       <fieldset class="starts">
-        <legend>布置起点</legend>
+        <legend>Starting layout</legend>
         <div class="segmented">
-          <button type="button" id="empty-tree">空树</button>
-          <button type="button" id="starter-tree">半成品</button>
+          <button type="button" id="empty-tree">Empty tree</button>
+          <button type="button" id="starter-tree">Starter</button>
         </div>
       </fieldset>
       <section class="backdrops" aria-labelledby="backdrop-title">
-        <h2 id="backdrop-title">换个场景</h2>
+        <h2 id="backdrop-title">Change scene</h2>
         <div id="backdrop-options" class="backdrop-options"></div>
       </section>
       <details class="inspiration">
-        <summary><span aria-hidden="true">✦</span> 复古金红灵感卡</summary>
-        <p>用陶红球和旧金球交错布置，把大蝴蝶结留给视线最先落下的那一枝。最后试试暖白灯。</p>
+        <summary><span aria-hidden="true">✦</span> Vintage gold &amp; red tip</summary>
+        <p>Alternate clay-red and antique-gold baubles, save the big bow for the branch your eye hits first, then try warm white lights.</p>
       </details>
     </aside>
 
-    <section class="studio" aria-label="布置画布">
+    <section class="studio" aria-label="Decorating canvas">
       <div class="picture">
-        <canvas id="scene" tabindex="0" aria-label="圣诞树画布。用方向键控制标记，按回车摆放或选择。">你的浏览器需要支持 Canvas 才能打开装饰台。</canvas>
-        <p id="loading" class="loading">正在打开装饰台…</p>
+        <canvas id="scene" tabindex="0" aria-label="Christmas tree canvas. Use arrow keys to move the marker, then press Enter to place or select.">Your browser needs Canvas support to open the studio.</canvas>
+        <p id="loading" class="loading">Opening the studio…</p>
         <div class="scene-top">
-          <div id="history" class="glass" aria-label="编辑历史">
-            <button type="button" id="undo" title="撤销" aria-label="撤销" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6 4 11l5 5M4 11h10a5 5 0 0 1 5 5v2"/></svg></button>
-            <button type="button" id="redo" title="重做" aria-label="重做" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 6 5 5-5 5m5-5H10a5 5 0 0 0-5 5v2"/></svg></button>
+          <div id="history" class="glass" aria-label="Edit history">
+            <button type="button" id="undo" title="Undo" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6 4 11l5 5M4 11h10a5 5 0 0 1 5 5v2"/></svg></button>
+            <button type="button" id="redo" title="Redo" aria-label="Redo" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 6 5 5-5 5m5-5H10a5 5 0 0 0-5 5v2"/></svg></button>
           </div>
         </div>
         <div id="placement" class="placement glass" hidden>
           <span id="placement-name"></span>
-          <button type="button" id="done-placing">完成摆放</button>
+          <button type="button" id="done-placing">Done placing</button>
         </div>
-        <div id="overlap" class="overlap glass" hidden aria-label="选择重叠饰品"></div>
+        <div id="overlap" class="overlap glass" hidden aria-label="Choose overlapping ornament"></div>
         <div id="edit-item" class="edit-item glass" hidden>
           <span id="edit-name"></span>
-          <div id="swatches" class="swatches" aria-label="换色"></div>
-          <button type="button" id="rotate" title="转动饰品" aria-label="转动饰品"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4v6h-6m6 0a8 8 0 1 0 0 5"/></svg></button>
-          <button type="button" id="remove" title="删除饰品" aria-label="删除饰品"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
+          <div id="swatches" class="swatches" aria-label="Change color"></div>
+          <button type="button" id="rotate" title="Rotate ornament" aria-label="Rotate ornament"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4v6h-6m6 0a8 8 0 1 0 0 5"/></svg></button>
+          <button type="button" id="remove" title="Remove ornament" aria-label="Remove ornament"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
         </div>
         <div class="scene-bottom">
-          <div class="glass zoom-controls" aria-label="画布缩放">
-            <button type="button" id="zoom-out" title="缩小" aria-label="缩小">−</button>
-            <button type="button" id="reset-view" title="回到全景" aria-label="回到全景">100%</button>
-            <button type="button" id="zoom-in" title="放大" aria-label="放大">+</button>
+          <div class="glass depth-controls" aria-label="View">
+            <button type="button" id="toggle-depth" aria-pressed="false" title="Toggle 2.5D view">2.5D</button>
+          </div>
+          <div class="glass zoom-controls" aria-label="Canvas zoom">
+            <button type="button" id="zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+            <button type="button" id="reset-view" title="Reset to full view" aria-label="Reset to full view">100%</button>
+            <button type="button" id="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
           </div>
         </div>
       </div>
       <div class="studio-footer">
-        <p id="scene-hint" aria-live="polite">选一件饰品，再点树枝挂上去。</p>
+        <p id="scene-hint" aria-live="polite">Pick an ornament, then tap a branch to hang it.</p>
         <div class="lights">
           <span aria-hidden="true">✧</span>
-          <span class="lights-label">灯光</span>
-          <div class="segmented" aria-label="灯光">
-            <button type="button" data-light="off" aria-pressed="false">关灯</button>
-            <button type="button" data-light="warm" aria-pressed="true">暖白</button>
-            <button type="button" data-light="color" aria-pressed="false">彩灯</button>
+          <span class="lights-label">Lights</span>
+          <div class="segmented" aria-label="Lights">
+            <button type="button" data-light="off" aria-pressed="false">Off</button>
+            <button type="button" data-light="warm" aria-pressed="true">Warm</button>
+            <button type="button" data-light="color" aria-pressed="false">Color</button>
           </div>
         </div>
       </div>
     </section>
 
     <aside class="materials panel" aria-labelledby="materials-title">
-      <div class="materials-heading"><h2 id="materials-title">装饰材料</h2><span id="material-count" class="material-count"></span></div>
-      <div id="categories" class="categories" aria-label="材料分类"></div>
+      <div class="materials-heading"><h2 id="materials-title">Ornaments</h2><span id="material-count" class="material-count"></span></div>
+      <div id="categories" class="categories" aria-label="Ornament categories"></div>
       <div id="item-options" class="item-options"></div>
     </aside>
   </main>
 
   <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title" aria-describedby="help-intro">
     <div class="photo-heading">
-      <h2 id="help-title">玩法说明</h2>
-      <form method="dialog"><button class="close" aria-label="关闭玩法说明" autofocus>×</button></form>
+      <h2 id="help-title">How to play</h2>
+      <form method="dialog"><button class="close" aria-label="Close how to play" autofocus>×</button></form>
     </div>
-    <p id="help-intro" class="help-intro">没有倒计时，也没有标准答案。慢慢布置，做一棵属于你的圣诞树。</p>
+    <p id="help-intro" class="help-intro">No timer, no perfect answer. Take your time and make a tree that feels like yours.</p>
     <ol class="help-steps">
-      <li><h3>挑树与场景</h3><p>选择喜欢的树型和背景，从「空树」开始，或用「半成品」接着装饰。每棵树会分别保留草稿；空树和半成品会替换当前布置，可以撤销。</p></li>
-      <li><h3>选材料，点一下挂上</h3><p>在「装饰材料」里挑选饰品，再点树枝摆放，同款可以连续放。树顶饰品要点树尖附近，礼物等树下装饰要点树脚附近。</p></li>
-      <li><h3>调整到喜欢的位置</h3><p>先点「完成摆放」，再点击或拖动已放好的饰品。选中后可删除、转动，彩球还可以换色。重叠时长按该位置，挑出想编辑的那一件；电脑也可右键选择。</p></li>
-      <li><h3>放大看看，点亮灯光</h3><p>用画布右下角的 − / + 缩放，点击百分比回到全景。电脑可滚轮缩放、放大后拖动空白处查看；手机可双指缩放和平移。试试暖白灯或彩灯，让树亮起来。</p></li>
-      <li><h3>拍下你的圣诞树</h3><p>点顶部「拍照」，选择「全景」或「当前视角」，再点「保存 PNG」。布置会自动保存在当前浏览器；清除浏览器数据会丢失草稿，喜欢的作品记得保存照片。</p></li>
+      <li><h3>Pick a tree and scene</h3><p>Choose a tree shape and background. Start from an empty tree, or continue with a starter layout. Each tree keeps its own draft; empty and starter replace the current layout and can be undone.</p></li>
+      <li><h3>Choose an ornament, then tap to hang it</h3><p>Pick from Ornaments, then tap a branch to place it. You can hang the same item again. Tree toppers need a tap near the tip; floor gifts and figures need a tap near the base.</p></li>
+      <li><h3>Nudge until it looks right</h3><p>Tap Done placing, then click or drag ornaments already on the tree. Selected items can be removed or rotated; baubles can change color. On overlaps, press and hold to pick the one you want; on desktop you can also right-click.</p></li>
+      <li><h3>Zoom in and turn on the lights</h3><p>Use − / + at the bottom right of the canvas, or tap the percentage to return to full view. On desktop, scroll to zoom and drag empty space after zooming; on phones, pinch to zoom and pan. Try warm or colored lights.</p></li>
+      <li><h3>Save a photo of your tree</h3><p>Tap Photo at the top, choose Full view or Current view, then Save PNG. Layouts autosave in this browser; clearing site data removes drafts, so save photos of favorites.</p></li>
     </ol>
     <details class="help-shortcuts">
-      <summary>电脑键盘操作</summary>
-      <p>撤销：Ctrl / ⌘ + Z；重做：Ctrl / ⌘ + Shift + Z。Esc 退出摆放或选择，Delete 删除选中的饰品。</p>
-      <p>聚焦画布后，用方向键移动标记，Enter 摆放或选择；选中饰品后，Alt + 方向键微调位置，按住 Shift 可加大移动步幅。</p>
+      <summary>Keyboard shortcuts</summary>
+      <p>Undo: Ctrl / ⌘ + Z. Redo: Ctrl / ⌘ + Shift + Z. Esc leaves placing or selection. Delete removes the selected ornament.</p>
+      <p>With the canvas focused, arrow keys move the marker and Enter places or selects. With an ornament selected, Alt + arrows nudge it; hold Shift for larger steps.</p>
     </details>
-    <form method="dialog" class="help-actions"><button class="primary">开始布置</button></form>
+    <form method="dialog" class="help-actions"><button class="primary">Start decorating</button></form>
   </dialog>
 
   <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
     <div class="photo-heading">
-      <h2 id="photo-title">你的圣诞树</h2>
-      <form method="dialog"><button class="close" aria-label="关闭照片预览">×</button></form>
+      <h2 id="photo-title">Your Christmas tree</h2>
+      <form method="dialog"><button class="close" aria-label="Close photo preview">×</button></form>
     </div>
-    <div class="photo-paper"><canvas id="photo" aria-label="照片预览"></canvas></div>
+    <div class="photo-paper"><canvas id="photo" aria-label="Photo preview"></canvas></div>
     <div class="photo-actions">
-      <div class="segmented" aria-label="照片取景">
-        <button type="button" data-photo="full" aria-pressed="true">全景</button>
-        <button type="button" data-photo="current" aria-pressed="false">当前视角</button>
+      <div class="segmented" aria-label="Photo framing">
+        <button type="button" data-photo="full" aria-pressed="true">Full view</button>
+        <button type="button" data-photo="current" aria-pressed="false">Current view</button>
       </div>
-      <button type="button" id="download" class="primary">保存 PNG</button>
+      <button type="button" id="download" class="primary">Save PNG</button>
     </div>
     <p id="photo-status" class="photo-status" aria-live="polite" hidden></p>
   </dialog>
