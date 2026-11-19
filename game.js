@@ -9,6 +9,8 @@ const context = canvas.getContext('2d');
 const picture = $('.picture');
 const photo = $('#photo');
 const dialog = $('#photo-dialog');
+const helpDialog = $('#help-dialog');
+$('#show-help').onclick = () => helpDialog.showModal();
 const categories = { all: '全部', ball: '彩球', hanging: '挂件', topper: '树顶', floor: '树下' };
 const storeKey = 'snow-window-v1';
 const clamp = (number, low, high) => Math.max(low, Math.min(high, number));
@@ -495,7 +497,7 @@ canvas.addEventListener('keydown', event => {
 });
 
 document.addEventListener('keydown', event => {
-  if (!ready || dialog.open) return;
+  if (!ready || dialog.open || helpDialog.open) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
     event.preventDefault();
     travel(event.shiftKey ? 'redo' : 'undo');

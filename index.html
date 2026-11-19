@@ -18,6 +18,7 @@
     </div>
     <div class="masthead-actions">
       <span id="save-state" class="save-state" aria-live="polite"></span>
+      <button type="button" id="show-help" class="help-button" aria-haspopup="dialog" aria-controls="help-dialog">玩法说明</button>
       <button type="button" id="take-photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照</button>
     </div>
   </header>
@@ -92,6 +93,27 @@
       <div id="item-options" class="item-options"></div>
     </aside>
   </main>
+
+  <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title" aria-describedby="help-intro">
+    <div class="photo-heading">
+      <h2 id="help-title">玩法说明</h2>
+      <form method="dialog"><button class="close" aria-label="关闭玩法说明" autofocus>×</button></form>
+    </div>
+    <p id="help-intro" class="help-intro">没有倒计时，也没有标准答案。慢慢布置，做一棵属于你的圣诞树。</p>
+    <ol class="help-steps">
+      <li><h3>挑树与场景</h3><p>选择喜欢的树型和背景，从「空树」开始，或用「半成品」接着装饰。每棵树会分别保留草稿；空树和半成品会替换当前布置，可以撤销。</p></li>
+      <li><h3>选材料，点一下挂上</h3><p>在「装饰材料」里挑选饰品，再点树枝摆放，同款可以连续放。树顶饰品要点树尖附近，礼物等树下装饰要点树脚附近。</p></li>
+      <li><h3>调整到喜欢的位置</h3><p>先点「完成摆放」，再点击或拖动已放好的饰品。选中后可删除、转动，彩球还可以换色。重叠时长按该位置，挑出想编辑的那一件；电脑也可右键选择。</p></li>
+      <li><h3>放大看看，点亮灯光</h3><p>用画布右下角的 − / + 缩放，点击百分比回到全景。电脑可滚轮缩放、放大后拖动空白处查看；手机可双指缩放和平移。试试暖白灯或彩灯，让树亮起来。</p></li>
+      <li><h3>拍下你的圣诞树</h3><p>点顶部「拍照」，选择「全景」或「当前视角」，再点「保存 PNG」。布置会自动保存在当前浏览器；清除浏览器数据会丢失草稿，喜欢的作品记得保存照片。</p></li>
+    </ol>
+    <details class="help-shortcuts">
+      <summary>电脑键盘操作</summary>
+      <p>撤销：Ctrl / ⌘ + Z；重做：Ctrl / ⌘ + Shift + Z。Esc 退出摆放或选择，Delete 删除选中的饰品。</p>
+      <p>聚焦画布后，用方向键移动标记，Enter 摆放或选择；选中饰品后，Alt + 方向键微调位置，按住 Shift 可加大移动步幅。</p>
+    </details>
+    <form method="dialog" class="help-actions"><button class="primary">开始布置</button></form>
+  </dialog>
 
   <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
     <div class="photo-heading">
