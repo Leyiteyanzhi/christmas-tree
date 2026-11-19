@@ -1,0 +1,14 @@
+.git
+.gitignore
+.assetsignore
+.wrangler
+.dev.vars
+node_modules
+docs
+*.md
+*.log
+wrangler.jsonc
+package.json
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

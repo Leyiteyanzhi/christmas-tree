@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#511d27">
+  <meta name="description" content="在雪夜小屋挑一棵树，挂上心仪的饰品，再拍下你的圣诞树。">
+  <title>雪夜窗边 · 圣诞树装饰台</title>
+  <link rel="icon" href="assets/star.webp">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="game.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand-copy">
+      <h1>雪夜窗边</h1>
+      <p>圣诞树装饰台</p>
+    </div>
+    <div class="masthead-actions">
+      <span id="save-state" class="save-state" aria-live="polite"></span>
+      <button type="button" id="take-photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>拍照</button>
+    </div>
+  </header>
+
+  <main class="workshop">
+    <aside class="trees panel" aria-labelledby="tree-title">
+      <h2 id="tree-title">挑一棵树</h2>
+      <div id="tree-options" class="tree-options"></div>
+      <fieldset class="starts">
+        <legend>布置起点</legend>
+        <div class="segmented">
+          <button type="button" id="empty-tree">空树</button>
+          <button type="button" id="starter-tree">半成品</button>
+        </div>
+      </fieldset>
+      <section class="backdrops" aria-labelledby="backdrop-title">
+        <h2 id="backdrop-title">换个场景</h2>
+        <div id="backdrop-options" class="backdrop-options"></div>
+      </section>
+      <details class="inspiration">
+        <summary><span aria-hidden="true">✦</span> 复古金红灵感卡</summary>
+        <p>用陶红球和旧金球交错布置，把大蝴蝶结留给视线最先落下的那一枝。最后试试暖白灯。</p>
+      </details>
+    </aside>
+
+    <section class="studio" aria-label="布置画布">
+      <div class="picture">
+        <canvas id="scene" tabindex="0" aria-label="圣诞树画布。用方向键控制标记，按回车摆放或选择。">你的浏览器需要支持 Canvas 才能打开装饰台。</canvas>
+        <p id="loading" class="loading">正在打开装饰台…</p>
+        <div class="scene-top">
+          <div id="history" class="glass" aria-label="编辑历史">
+            <button type="button" id="undo" title="撤销" aria-label="撤销" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6 4 11l5 5M4 11h10a5 5 0 0 1 5 5v2"/></svg></button>
+            <button type="button" id="redo" title="重做" aria-label="重做" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 6 5 5-5 5m5-5H10a5 5 0 0 0-5 5v2"/></svg></button>
+          </div>
+        </div>
+        <div id="placement" class="placement glass" hidden>
+          <span id="placement-name"></span>
+          <button type="button" id="done-placing">完成摆放</button>
+        </div>
+        <div id="overlap" class="overlap glass" hidden aria-label="选择重叠饰品"></div>
+        <div id="edit-item" class="edit-item glass" hidden>
+          <span id="edit-name"></span>
+          <div id="swatches" class="swatches" aria-label="换色"></div>
+          <button type="button" id="rotate" title="转动饰品" aria-label="转动饰品"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 4v6h-6m6 0a8 8 0 1 0 0 5"/></svg></button>
+          <button type="button" id="remove" title="删除饰品" aria-label="删除饰品"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
+        </div>
+        <div class="scene-bottom">
+          <div class="glass zoom-controls" aria-label="画布缩放">
+            <button type="button" id="zoom-out" title="缩小" aria-label="缩小">−</button>
+            <button type="button" id="reset-view" title="回到全景" aria-label="回到全景">100%</button>
+            <button type="button" id="zoom-in" title="放大" aria-label="放大">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="studio-footer">
+        <p id="scene-hint" aria-live="polite">选一件饰品，再点树枝挂上去。</p>
+        <div class="lights">
+          <span aria-hidden="true">✧</span>
+          <span class="lights-label">灯光</span>
+          <div class="segmented" aria-label="灯光">
+            <button type="button" data-light="off" aria-pressed="false">关灯</button>
+            <button type="button" data-light="warm" aria-pressed="true">暖白</button>
+            <button type="button" data-light="color" aria-pressed="false">彩灯</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="materials panel" aria-labelledby="materials-title">
+      <div class="materials-heading"><h2 id="materials-title">装饰材料</h2><span id="material-count" class="material-count"></span></div>
+      <div id="categories" class="categories" aria-label="材料分类"></div>
+      <div id="item-options" class="item-options"></div>
+    </aside>
+  </main>
+
+  <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
+    <div class="photo-heading">
+      <h2 id="photo-title">你的圣诞树</h2>
+      <form method="dialog"><button class="close" aria-label="关闭照片预览">×</button></form>
+    </div>
+    <div class="photo-paper"><canvas id="photo" aria-label="照片预览"></canvas></div>
+    <div class="photo-actions">
+      <div class="segmented" aria-label="照片取景">
+        <button type="button" data-photo="full" aria-pressed="true">全景</button>
+        <button type="button" data-photo="current" aria-pressed="false">当前视角</button>
+      </div>
+      <button type="button" id="download" class="primary">保存 PNG</button>
+    </div>
+    <p id="photo-status" class="photo-status" aria-live="polite" hidden></p>
+  </dialog>
+</body>
+</html>
