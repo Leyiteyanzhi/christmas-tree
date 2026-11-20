@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import math
 import random
+import subprocess
 import bpy
 import numpy as np
 
@@ -90,77 +91,85 @@ def lathe(parent,name,mat,alpha,y0,y1,width,height,bottom):
     surface(parent,name,mat,verts,strip_faces(slices+1,levels),uv)
 
 # The painted walls and floor meet on the floor line of the original illustration.
-room=group('Cabin')
-wall,_=painted('Snow window and hearth',ASSETS/'room.webp')
-verts=[];uv=[]
-for x,u in [(-14,0),(-4.7,.001),(4.7,.999),(14,1)]:
-    for y,z,v in [(-10,.196,0),(-1.75,.196,.001),(2.8,.196,.16),(2.8,5.75,1),(2.8,12,1)]:
-        verts.append((x,y,z));uv.append((u,v))
-surface(room,'Painted cabin',wall,verts,[tuple(reversed(f)) for f in strip_faces(5,4)],uv,False)
-
-tree=group('Evergreen')
-pine,image=painted('Deep fir',ASSETS/'pine.webp',True)
-# Keep the dark brushwork visible where several foliage layers cast shadows.
-nodes=pine.node_tree.nodes
-shader=nodes.get("Principled BSDF")
-tex=next(n for n in nodes if n.type=="TEX_IMAGE")
-pine.node_tree.links.new(tex.outputs["Color"],shader.inputs["Emission Color"])
-shader.inputs["Emission Strength"].default_value=.38
-alpha=pixels(image)[:,:,3]
-# Deeply curved radial layers keep the illustrated needle silhouette intact.
-# Offset the middle of each layer towards its own side of the tree for parallax.
-verts=[];uv=[];faces=[]
-for layer in range(6):
-    angle=tau*layer/6
-    start=len(verts)
-    for j in range(45):
-        f=j/44
-        v=.084+.914*f
-        taper=(1-f)**.79
-        for i in range(33):
-            u=i/32
-            lateral=(u-.5)*2.50
-            bulge=.56*taper*max(0,1-(2*u-1)**2)
-            x=lateral*cos(angle)-bulge*sin(angle)
-            y=lateral*sin(angle)+bulge*cos(angle)
-            z=.44+2.98*f+.035*sin(angle*3+f*13)*(1-f)
+def build_room(model, key):
+    room=group(model)
+    wall,_=painted(key,ASSETS/(key+'.webp'))
+    verts=[];uv=[]
+    for x,u in [(-14,0),(-4.7,.001),(4.7,.999),(14,1)]:
+        for y,z,v in [(-10,.196,0),(-1.75,.196,.001),(2.8,.196,.16),(2.8,5.75,1),(2.8,12,1)]:
             verts.append((x,y,z));uv.append((u,v))
-    faces.extend(tuple(start+k for k in face) for face in strip_faces(33,45))
-surface(tree,'Layered painted fir',pine,verts,faces,uv)
-lathe(tree,'Woven willow basket',pine,alpha,.003,.085,2.34,.29,.19)
+    surface(room,'Painted cabin',wall,verts,[tuple(reversed(f)) for f in strip_faces(5,4)],uv,False)
+
+for model,key in [('Cabin','room'),('Market','market'),('Bakery','bakery')]:
+    build_room(model,key)
+
 sites=json.loads((HERE/'hanging-sites.json').read_text())
-# Arched outer branch fans add real overlap, depth and irregular tips at every angle.
-batches=[([],[],[]) for _ in range(3)]
-for k,(x,z,front) in enumerate(sites):
-    y=-front
-    a=math.atan2(y,x)
-    r=math.hypot(x,y)
-    f=(z-.6)/2.8
-    width=.035+.085*(1-f)
-    variant=k%3
-    verts,uv,faces=batches[variant]
-    for fork in [-1,0,1]:
+def build_tree(model,key):
+    tree=group(model)
+    pine,image=painted(key+' needles',ASSETS/(key+'.webp'),True)
+    # Keep the dark brushwork visible where several foliage layers cast shadows.
+    nodes=pine.node_tree.nodes
+    shader=nodes.get("Principled BSDF")
+    tex=next(n for n in nodes if n.type=="TEX_IMAGE")
+    pine.node_tree.links.new(tex.outputs["Color"],shader.inputs["Emission Color"])
+    shader.inputs["Emission Strength"].default_value=.38
+    alpha=pixels(image)[:,:,3]
+    # Deeply curved radial layers keep the illustrated needle silhouette intact.
+    # Offset the middle of each layer towards its own side of the tree for parallax.
+    verts=[];uv=[];faces=[]
+    for layer in range(6):
+        angle=tau*layer/6
         start=len(verts)
-        twist=rng.uniform(-.18,.18)
-        turn=fork*.19
-        relative=abs(fork)/2
-        reach_tip=r*(.99-.13*relative)*rng.uniform(.98,1.035)
-        tilt=rng.uniform(-.45,.45)
-        for j in range(7):
-            t=j/6
-            direction=a+turn*t+twist*(1-t)
-            reach=r*.24*(1-t)+reach_tip*t
-            for i in range(5):
-                side=(i-2)/2
-                spread=side*width*(1.13-.23*relative)
-                zz=z+(.095+.08*(1-f))*(1-t)+.080*sin(t*math.pi)-side*side*.085*(1-f)+tilt*spread+.065*relative
-                verts.append((reach*cos(direction)-spread*sin(direction),
-                              reach*sin(direction)+spread*cos(direction),zz))
-                uv.append((t,(side+1)/2))
-        faces.extend(tuple(start+i for i in face) for face in strip_faces(5,7))
-for i,(verts,uv,faces) in enumerate(batches):
-    mat,_=painted('Painted needle tips '+str(i),HERE/'textures'/f'spray-{i}.png',True)
-    surface(tree,'Branch fans '+str(i),mat,verts,faces,uv)
+        for j in range(45):
+            f=j/44
+            v=.084+.914*f
+            taper=(1-f)**.79
+            for i in range(33):
+                u=i/32
+                lateral=(u-.5)*2.50
+                bulge=.56*taper*max(0,1-(2*u-1)**2)
+                x=lateral*cos(angle)-bulge*sin(angle)
+                y=lateral*sin(angle)+bulge*cos(angle)
+                z=.44+2.98*f+.035*sin(angle*3+f*13)*(1-f)
+                verts.append((x,y,z));uv.append((u,v))
+        faces.extend(tuple(start+k for k in face) for face in strip_faces(33,45))
+    surface(tree,'Layered painted fir',pine,verts,faces,uv)
+    lathe(tree,'Woven willow basket',pine,alpha,.003,.085,2.34,.29,.19)
+    # Arched outer branch fans add real overlap, depth and irregular tips at every angle.
+    batches=[([],[],[]) for _ in range(3)]
+    for k,(x,z,front) in enumerate(sites):
+        y=-front
+        a=math.atan2(y,x)
+        r=math.hypot(x,y)
+        f=(z-.6)/2.8
+        width=.035+.085*(1-f)
+        variant=k%3
+        verts,uv,faces=batches[variant]
+        for fork in [-1,0,1]:
+            start=len(verts)
+            twist=rng.uniform(-.18,.18)
+            turn=fork*.19
+            relative=abs(fork)/2
+            reach_tip=r*(.99-.13*relative)*rng.uniform(.98,1.035)
+            tilt=rng.uniform(-.45,.45)
+            for j in range(7):
+                t=j/6
+                direction=a+turn*t+twist*(1-t)
+                reach=r*.24*(1-t)+reach_tip*t
+                for i in range(5):
+                    side=(i-2)/2
+                    spread=side*width*(1.13-.23*relative)
+                    zz=z+(.095+.08*(1-f))*(1-t)+.080*sin(t*math.pi)-side*side*.085*(1-f)+tilt*spread+.065*relative
+                    verts.append((reach*cos(direction)-spread*sin(direction),
+                                  reach*sin(direction)+spread*cos(direction),zz))
+                    uv.append((t,(side+1)/2))
+            faces.extend(tuple(start+i for i in face) for face in strip_faces(5,7))
+    for i,(verts,uv,faces) in enumerate(batches):
+        mat,_=painted('Painted needle tips '+str(i),HERE/'textures'/f'spray-{i}.png',True)
+        surface(tree,'Branch fans '+str(i),mat,verts,faces,uv)
+
+for model,key in [('Evergreen','pine'),('TallFir','fir'),('SnowSpruce','spruce')]:
+    build_tree(model,key)
 
 def puffed(parent,mat,image,width,height,bottom,depth):
     # Two sculpted surfaces follow the alpha outline. The distance to the edge
@@ -194,14 +203,18 @@ def puffed(parent,mat,image,width,height,bottom,depth):
     faces.extend((a,a+n,b+n,b) for a,b in boundary.values())
     surface(parent,parent.name+' carving',mat,verts,faces,uv)
 
-for key in ['red','gold','blue','bell','cane','bow','star','gift-red']:
+catalog=json.loads(subprocess.check_output([
+    'node','--input-type=module','-e',
+    "import {items} from './scene.js'; console.log(JSON.stringify(items))"
+],cwd=HERE.parent))
+for key,item in catalog.items():
     obj=group('Item_'+key)
     mat,image=painted('Paint · '+key,ASSETS/(key+'.webp'),True,
         .19 if key in ['gold','bell','star'] else .035,.54 if key in ['red','gold','blue'] else .79)
     w,h=image.size
-    height={'gift-red':.37,'star':.45,'bow':.26,'bell':.26}.get(key,.285)
-    bottom=0 if key in ['star','gift-red'] else -height
-    if key in ['red','gold','blue']:
+    height={'gift-red':.37,'star':.45,'bow':.26,'bell':.26}.get(key, .285 if item['category']=='ball' else item['size']*.0047)
+    bottom=0 if item['category'] in ['topper','floor'] else -height
+    if item['category']=='ball':
         # Preserve the opening in the metal hanging loop on a separate sculpted cap.
         cap=.77
         lathe(obj,'Lacquered glass',mat,pixels(image)[:,:,3],.003,cap,
@@ -214,7 +227,7 @@ for key in ['red','gold','blue','bell','cane','bow','star','gift-red']:
         puffed(obj,mat,temp,height*w/h,height,bottom,.024)
         bpy.data.images.remove(temp)
     else:
-        puffed(obj,mat,image,height*w/h,height,bottom,{'gift-red':.135,'bell':.077,'star':.06,'bow':.048}.get(key,.023))
+        puffed(obj,mat,image,height*w/h,height,bottom,{'gift-red':.135,'bell':.077,'star':.06,'bow':.048}.get(key,.10 if item['category']=='floor' else .028))
 
 (OUT/'anchors.json').write_text(json.dumps(sites,separators=(',',':')))
 for root in [o for o in bpy.data.objects if o.type=='EMPTY']:
@@ -225,6 +238,8 @@ for root in [o for o in bpy.data.objects if o.type=='EMPTY']:
         export_lights=False,export_cameras=False)
 for i,root in enumerate(sorted((o for o in bpy.data.objects if o.type=='EMPTY' and o.name.startswith('Item_')),key=lambda o:o.name)):
     root.location=(3+i%4*.58,-1,.55+(i//4)*.67)
+for i,model in enumerate(['Market','Bakery','TallFir','SnowSpruce']):
+    bpy.data.objects[model].location.x=(i+1)*30
 bpy.ops.file.pack_all()
 bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(HERE/'Snow Window.blend'),compress=True)

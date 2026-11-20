@@ -8,7 +8,12 @@
 <div class="scene-tools"><button id="turn" aria-pressed="true" disabled>Turn tree</button><button id="edit" aria-pressed="false" disabled>Edit ornaments</button></div>
 <div class="zoom"><button id="less" aria-label="Zoom out" disabled>−</button><button id="home" disabled>Reset view</button><button id="more" aria-label="Zoom in" disabled>+</button></div>
 </section>
-<aside><h2>Ornament box</h2><div id="palette"></div>
+<aside><div class="pickers">
+<label>Tree <select id="tree-kind" disabled></select></label>
+<label>Scene <select id="setting" disabled></select></label></div>
+<div class="row layouts"><button id="empty" disabled>Empty tree</button><button id="starter" disabled>Starter layout</button></div>
+<h2>Ornament box</h2>
+<label class="filter">Category <select id="category" disabled><option value="all">All decorations</option><option value="ball">Baubles</option><option value="hanging">Hanging ornaments</option><option value="topper">Tree toppers</option><option value="floor">Under the tree</option></select></label><div id="palette"></div>
 <fieldset><legend>Tree lights</legend><div class="row" id="lights"><button data-light="off" disabled>Off</button><button data-light="warm" disabled>Warm</button><button data-light="colour" disabled>Colour</button></div></fieldset>
 <div class="row actions"><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="remove" disabled>Remove</button></div>
 <p id="hint" role="status">Opening the cabin…</p><small id="saved"></small></aside></div>

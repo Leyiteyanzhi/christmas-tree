@@ -1,8 +1,14 @@
 import * as T from './vendor/three.js';
+import {trees, backdrops, items} from '../scene.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#view');
-const names = {red:'Ruby ball',gold:'Gold ball',blue:'Ice ball',bell:'Brass bell',cane:'Candy cane',bow:'Velvet bow',star:'Tree star','gift-red':'Wrapped gift'};
+const treeFiles = {pine:'Evergreen', fir:'TallFir', spruce:'SnowSpruce'};
+const roomFiles = {room:'Cabin', market:'Market', bakery:'Bakery'};
+const cabins = {}, crowns = {}, drafts = {}, histories = {};
+let activeTree = 'pine';
+const treeWidth = () => trees[activeTree].width / trees.pine.width;
+const treeHeight = () => (728-trees[activeTree].top) / (728-trees.pine.top);
 const lights = ['warm','colour','off'];
 const store = 'snow-window-studio-3d-v1';
 const scene = new T.Scene();
@@ -10,17 +16,20 @@ scene.background = new T.Color(0x35473f);
 const tree = new T.Group();
 const ornaments = new T.Group();
 tree.add(ornaments);
-scene.add(tree);
+const floorItems = new T.Group();
+const lightString = new T.Group();
+tree.add(lightString);
+scene.add(tree,floorItems);
 const camera = new T.PerspectiveCamera(37,1,.08,40);
 const ray = new T.Raycaster();
 const models = {};
 const sites = [];
 let renderer, draft, bulbs, spotMesh, selected, material, gesture;
 let mode = 'turn', zoom = 1, elevation = .115, frame = 0;
-const past = [], future = [];
+let past = [], future = [];
 const historyLimit = 60;
 const say = text => { $('#hint').textContent = text; };
-const type = key => key === 'star' ? 'top' : key === 'gift-red' ? 'floor' : 'branch';
+const type = key => items[key].category === 'topper' ? 'top' : items[key].category === 'floor' ? 'floor' : 'branch';
 const objectAt = site => draft.items.find(item => item.site === site);
 const clamp = T.MathUtils.clamp;
 
@@ -55,26 +64,43 @@ function initialDraft() {
   }
   items.push({key:'star',site:sites.findIndex(s=>s.kind==='top')});
   items.push({key:'gift-red',site:sites.findIndex(s=>s.kind==='floor' && s.pos.z>1)});
-  return {items,light:'warm'};
+  return {items,light:'warm',backdrop:'room'};
 }
-function readDraft() {
-  try {
-    const saved=JSON.parse(localStorage.getItem(store));
-    if (saved && Array.isArray(saved.items) && lights.includes(saved.light)) {
-      const used=new Set();
-      return {light:saved.light,items:saved.items.filter(i=>{
-        if (!i || !Object.hasOwn(names,i.key) || !Number.isInteger(i.site) ||
-          sites[i.site]?.kind!==type(i.key) || used.has(i.site)) return false;
-        used.add(i.site);
-        return true;
-      })};
-    }
-  } catch { /* Storage may be unavailable in private browsing. */ }
-  return initialDraft();
+function restoreTree(key,saved) {
+  if (!Array.isArray(saved?.items) || !lights.includes(saved.light))
+    return key==='pine' ? initialDraft() : {items:[],light:'off',backdrop:'room'};
+  const used=new Set();
+  return {light:saved.light,backdrop:Object.hasOwn(backdrops,saved.backdrop)?saved.backdrop:'room',
+    items:saved.items.filter(i=>{
+      if (!i || !Object.hasOwn(items,i.key) || !Number.isInteger(i.site) ||
+        sites[i.site]?.kind!==type(i.key) || used.has(i.site)) return false;
+      used.add(i.site);
+      return true;
+    })};
+}
+function loadDrafts() {
+  let saved;
+  try { saved=JSON.parse(localStorage.getItem(store)); } catch {}
+  for (const key of Object.keys(trees)) {
+    drafts[key]=restoreTree(key,saved?.drafts?.[key] ?? (key==='pine'?saved:null));
+    histories[key]={past:[],future:[]};
+  }
+  switchTree(Object.hasOwn(trees,saved?.activeTree)?saved.activeTree:'pine');
+}
+function switchTree(key) {
+  activeTree=key;
+  draft=drafts[key];
+  ({past,future}=histories[key]);
+  material=null; selected=null; gesture=null; mode='turn';
+  tree.rotation.y=0;
+  for (const [id,crown] of Object.entries(crowns)) crown.visible=id===key;
+  lightString.scale.set(treeWidth(),treeHeight(),treeWidth());
+  rebuild();
 }
 function persist() {
+  drafts[activeTree]=draft;
   try {
-    localStorage.setItem(store,JSON.stringify(draft));
+    localStorage.setItem(store,JSON.stringify({activeTree,drafts}));
     $('#saved').textContent='Draft saved on this device';
   } catch { $('#saved').textContent='Storage unavailable · save a photo to keep your tree'; }
 }
@@ -98,12 +124,21 @@ function history(from,to) {
 const spotGeometry=new T.SphereGeometry(.039,8,6);
 const spotMaterial=new T.MeshBasicMaterial({color:0xffdb88});
 const selection = new T.Mesh(new T.TorusGeometry(.145,.009,6,36),spotMaterial);
-tree.add(selection);
+scene.add(selection);
 selection.visible=false;
 
+function localPoint(site) {
+  const p=site.pos.clone();
+  if (site.kind!=='floor') p.multiply(new T.Vector3(treeWidth(),treeHeight(),treeWidth()));
+  return p;
+}
+function worldPoint(site) {
+  const p=localPoint(site);
+  return site.kind==='floor' ? p : tree.localToWorld(p);
+}
 function facesPlayer(site) {
   if (site.kind==='top') return true;
-  const world=tree.localToWorld(site.pos.clone());
+  const world=worldPoint(site);
   if (site.kind==='floor') return world.z>-.24;
   return world.z>Math.hypot(world.x,world.z)*.08;
 }
@@ -118,16 +153,16 @@ function refreshSpots() {
   const ids=candidates();
   spotMesh.count=ids.length;
   ids.forEach((id,i)=>{
-    const p=sites[id].pos;
+    const p=worldPoint(sites[id]);
     spotMesh.setMatrixAt(i,new T.Matrix4().makeTranslation(p.x,p.y,p.z));
   });
   spotMesh.instanceMatrix.needsUpdate=true;
   spotMesh.visible=ids.length>0;
   selection.visible=mode==='edit' && selected!=null;
   if (selection.visible) {
-    selection.position.copy(sites[selected].pos);
+    selection.position.copy(worldPoint(sites[selected]));
     selection.position.y+=type(objectAt(selected).key)==='branch'?-.12:.13;
-    selection.rotation.y=-tree.rotation.y;
+
   }
 }
 function renderLights() {
@@ -140,17 +175,21 @@ function renderLights() {
 }
 function rebuild() {
   ornaments.clear();
+  floorItems.clear();
+  for (const [key,cabin] of Object.entries(cabins)) cabin.visible=key===draft.backdrop;
   for (const {key,site} of draft.items) {
     const model=models[key].clone();
     model.userData.site=site;
-    model.position.copy(sites[site].pos);
+    model.position.copy(localPoint(sites[site]));
     model.rotation.y=Math.atan2(model.position.x,model.position.z);
-    ornaments.add(model);
+    (type(key)==='floor'?floorItems:ornaments).add(model);
   }
   renderLights();
   controls();
 }
 function controls() {
+  $('#tree-kind').value=activeTree;
+  $('#setting').value=draft.backdrop;
   $('#turn').setAttribute('aria-pressed',mode==='turn');
   $('#edit').setAttribute('aria-pressed',mode==='edit');
   for (const b of document.querySelectorAll('[data-key]')) b.setAttribute('aria-pressed',b.dataset.key===material);
@@ -162,7 +201,7 @@ function controls() {
   draw();
 }
 function screenPos(site) {
-  const p=tree.localToWorld(site.pos.clone()).project(camera);
+  const p=worldPoint(site).project(camera);
   const r=canvas.getBoundingClientRect();
   return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};
 }
@@ -178,9 +217,9 @@ function nearest(x,y) {
 function hit(x,y) {
   const r=canvas.getBoundingClientRect();
   ray.setFromCamera(new T.Vector2(2*(x-r.left)/r.width-1,1-2*(y-r.top)/r.height),camera);
-  for (const intersection of ray.intersectObjects(ornaments.children,true)) {
+  for (const intersection of ray.intersectObjects([...ornaments.children,...floorItems.children],true)) {
     let obj=intersection.object;
-    while (obj.parent!==ornaments) obj=obj.parent;
+    while (obj.parent!==ornaments && obj.parent!==floorItems) obj=obj.parent;
     if (facesPlayer(sites[obj.userData.site])) return obj.userData.site;
   }
   return null;
@@ -190,7 +229,7 @@ function place(site) {
   if (material) {
     const key=material;
     commit({...draft,items:[...draft.items.filter(item=>item.site!==site),{key,site}]});
-    say(names[key]+' placed. Choose another spot or switch to Edit ornaments.');
+    say(items[key].name+' placed. Choose another spot or switch to Edit ornaments.');
   } else if (selected!=null && site!==selected) {
     const old=selected;
     selected=site;
@@ -270,22 +309,34 @@ function illuminate() {
     const r=1.12*(1-f)**.85+.052;
     points.push(new T.Vector3(r*Math.sin(a),.83+2.43*f+.035*Math.sin(a*2),r*Math.cos(a)));
   }
-  tree.add(new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:0x9d7948})));
+  lightString.add(new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:0x9d7948})));
   bulbs=new T.InstancedMesh(new T.SphereGeometry(.017,8,6),new T.MeshBasicMaterial(),60);
   for (let i=0;i<60;i++) {
     const p=points[i*5];
     bulbs.setMatrixAt(i,new T.Matrix4().makeTranslation(p.x,p.y,p.z));
   }
-  tree.add(bulbs);
+  lightString.add(bulbs);
 }
 function bind() {
-  for (const [key,name] of Object.entries(names)) {
+  for (const [id,options] of [['tree-kind',trees],['setting',backdrops]]) {
+    const select=document.getElementById(id);
+    for (const [key,value] of Object.entries(options)) select.add(new Option(value.name,key));
+  }
+  $('#tree-kind').onchange=e=>{switchTree(e.target.value);persist();say('Choose an ornament or drag to turn the tree.');};
+  $('#setting').onchange=e=>commit({...draft,backdrop:e.target.value});
+  $('#empty').onclick=()=>{setMode('turn');commit({...draft,items:[],light:'off'});};
+  $('#starter').onclick=()=>{setMode('turn');commit({...initialDraft(),backdrop:draft.backdrop});};
+  $('#category').onchange=e=>{
+    for (const b of $('#palette').children)
+      b.hidden=e.target.value!=='all' && items[b.dataset.key].category!==e.target.value;
+  };
+  for (const [key,{name}] of Object.entries(items)) {
     const b=document.createElement('button'),img=new Image();
     img.src='../assets/'+key+'.webp';img.alt='';
     b.append(img,name);b.dataset.key=key;
     b.onclick=()=>{
       mode='edit';material=key;selected=null;
-      say(key==='star'?'Tap the glowing spot at the treetop.':key==='gift-red'?'Tap a glowing spot on the tree skirt.':'Tap a glowing branch tip to hang '+name.toLowerCase()+'.');
+      say(type(key)==='top'?'Tap the glowing spot at the treetop.':type(key)==='floor'?'Tap a glowing spot on the tree skirt.':'Tap a glowing branch tip to hang '+name.toLowerCase()+'.');
       controls();
     };
     $('#palette').append(b);
@@ -324,25 +375,35 @@ async function start() {
   renderer.toneMapping=T.ACESFilmicToneMapping;
   const loader=new T.GLTFLoader().setMeshoptDecoder(T.MeshoptDecoder);
   const load=async name=>(await loader.loadAsync('./models/'+name+'.glb')).scene;
-  const [cabin,evergreen,raw]=await Promise.all([load('Cabin'),load('Evergreen'),
-    fetch('./models/anchors.json').then(r=>{if(!r.ok)throw Error('Missing anchors');return r.json();}),
-    Promise.all(Object.keys(names).map(async key=>{models[key]=await load('Item_'+key);}))]);
-  scene.add(cabin);tree.add(evergreen);
-  for (const root of [cabin,evergreen,...Object.values(models)]) {
-    root.traverse(o=>{
-      if (o.isMesh) {o.receiveShadow=root===cabin;o.castShadow=root!==cabin;}
-    });
+  async function loadCollection(files, library, parent) {
+    await Promise.all(Object.entries(files).map(async ([key,file])=>{
+      const model=await load(file);
+      library[key]=model;
+      model.traverse(o=>{
+        if (o.isMesh) {o.receiveShadow=library===cabins;o.castShadow=library!==cabins;}
+      });
+      if (parent) {model.visible=false;parent.add(model);}
+      if (library===crowns) {
+        const width=trees[key].width/trees.pine.width;
+        model.scale.set(width,(728-trees[key].top)/(728-trees.pine.top),width);
+      }
+    }));
   }
+  const [raw]=await Promise.all([
+    fetch('./models/anchors.json').then(r=>{if(!r.ok)throw Error('Missing anchors');return r.json();}),
+    loadCollection(treeFiles,crowns,tree),loadCollection(roomFiles,cabins,scene),
+    loadCollection(Object.fromEntries(Object.keys(items).map(k=>[k,'Item_'+k])),models)
+  ]);
   raw.forEach(p=>addSite(p,'branch'));
   addSite([0,3.41,0],'top');
   for (let i=0;i<18;i++) addSite([1.22*Math.sin(i*Math.PI/9),.218,1.22*Math.cos(i*Math.PI/9)],'floor');
   spotMesh=new T.InstancedMesh(spotGeometry,spotMaterial,sites.length);
   spotMesh.frustumCulled=false;
-  tree.add(spotMesh);
+  scene.add(spotMesh);
   illuminate();
-  draft=readDraft();
   bind();
-  document.querySelectorAll('button').forEach(b=>{b.disabled=false;});
+  loadDrafts();
+  document.querySelectorAll('button, select').forEach(b=>{b.disabled=false;});
   updateView();rebuild();setMode('turn');
   new ResizeObserver(updateView).observe(canvas);
 }

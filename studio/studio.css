@@ -30,3 +30,11 @@ legend{font-size:20px;margin-bottom:6px}
 #hint{min-height:3em;margin:16px 0 5px}
 #saved{color:#d5cdb7}
 @media(max-width:740px){main{padding:12px 9px}.workspace{grid-template-columns:1fr;gap:9px}.scene{height:clamp(310px,55svh,530px)}header{margin-bottom:10px}aside{padding:13px}h2{font-size:21px;margin-bottom:7px}#palette{grid-template-columns:repeat(4,minmax(0,1fr))}#palette button{flex-direction:column;gap:1px;text-align:center}fieldset{margin-top:12px}.scene-tools{top:7px;left:7px}.zoom{bottom:7px;right:7px}#hint{min-height:0}}
+.pickers{display:grid;grid-template-columns:1fr;gap:7px}
+.pickers label,.filter{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+select{min-width:0;max-width:78%;font:inherit;background:#192f27;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px}
+.layouts{margin:10px 0 16px}
+.filter{margin-bottom:9px}
+#palette{max-height:260px;overflow:auto;padding:3px}
+#palette button[hidden]{display:none}
+@media(max-width:740px){#palette{max-height:166px}}
