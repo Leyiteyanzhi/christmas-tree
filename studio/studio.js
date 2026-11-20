@@ -25,7 +25,7 @@ const ray = new T.Raycaster();
 const models = {};
 const sites = [];
 let renderer, draft, bulbs, spotMesh, selected, material, gesture;
-let mode = 'turn', zoom = 1, elevation = .115, frame = 0;
+let mode = 'turn', zoom = 1, azimuth = 0, elevation = .115, frame = 0;
 let past = [], future = [];
 const historyLimit = 60;
 const say = text => { $('#hint').textContent = text; };
@@ -44,8 +44,13 @@ function updateView() {
   const {width,height} = canvas.getBoundingClientRect();
   renderer.setSize(width,height,false);
   camera.aspect = width/height;
-  const distance = Math.max(7.12,5.0/camera.aspect)/zoom;
-  camera.position.set(0,1.83+distance*Math.sin(elevation),distance*Math.cos(elevation));
+  // The closest furniture starts 4.65 units from the room centre.
+  // Use the lens for the last part of a wide shot so the eye stays inside.
+  const framingDistance = Math.max(7.12,5.0/camera.aspect)/zoom;
+  const distance = Math.min(4.40,framingDistance);
+  camera.fov = T.MathUtils.radToDeg(2*Math.atan(Math.tan(T.MathUtils.degToRad(37/2))*framingDistance/distance));
+  const radius = distance*Math.cos(elevation);
+  camera.position.set(radius*Math.sin(azimuth),1.83+distance*Math.sin(elevation),radius*Math.cos(azimuth));
   camera.lookAt(0,1.80,0);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
@@ -92,7 +97,6 @@ function switchTree(key) {
   draft=drafts[key];
   ({past,future}=histories[key]);
   material=null; selected=null; gesture=null; mode='turn';
-  tree.rotation.y=0;
   for (const [id,crown] of Object.entries(crowns)) crown.visible=id===key;
   lightString.scale.set(treeWidth(),treeHeight(),treeWidth());
   rebuild();
@@ -139,8 +143,9 @@ function worldPoint(site) {
 function facesPlayer(site) {
   if (site.kind==='top') return true;
   const world=worldPoint(site);
-  if (site.kind==='floor') return world.z>-.24;
-  return world.z>Math.hypot(world.x,world.z)*.08;
+  const towardsEye = world.x*Math.sin(azimuth)+world.z*Math.cos(azimuth);
+  if (site.kind==='floor') return towardsEye>-.24;
+  return towardsEye>Math.hypot(world.x,world.z)*.08;
 }
 function candidates() {
   const key=material || (selected!=null && objectAt(selected)?.key);
@@ -161,6 +166,7 @@ function refreshSpots() {
   selection.visible=mode==='edit' && selected!=null;
   if (selection.visible) {
     selection.position.copy(worldPoint(sites[selected]));
+    selection.quaternion.copy(camera.quaternion);
     selection.position.y+=type(objectAt(selected).key)==='branch'?-.12:.13;
 
   }
@@ -225,7 +231,7 @@ function hit(x,y) {
   return null;
 }
 function place(site) {
-  if (site==null) {say('Tap a glowing spot, or turn the tree to see the other side.');return;}
+  if (site==null) {say('Tap a glowing spot, or orbit to see the other side.');return;}
   if (material) {
     const key=material;
     commit({...draft,items:[...draft.items.filter(item=>item.site!==site),{key,site}]});
@@ -239,7 +245,7 @@ function place(site) {
 }
 function setMode(next) {
   mode=next; material=null; selected=null;
-  say(mode==='turn'?'Drag to turn the tree. Pinch or scroll to zoom.':'Tap an ornament to move or remove it.');
+  say(mode==='turn'?'Drag to orbit the tree. Pinch or scroll to zoom.':'Tap an ornament to move or remove it.');
   controls();
 }
 const fingers=new Map();
@@ -249,7 +255,7 @@ canvas.addEventListener('pointerdown',e=>{
   canvas.setPointerCapture(e.pointerId);
   fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if (fingers.size>1) {gesture={pinch:true,gap:Math.max(1,gap()),zoom};return;}
-  gesture={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:tree.rotation.y,elevation,drag:false};
+  gesture={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:azimuth,elevation,drag:false};
   if (mode==='edit' && !material) gesture.site=hit(e.clientX,e.clientY);
 });
 canvas.addEventListener('pointermove',e=>{
@@ -263,7 +269,7 @@ canvas.addEventListener('pointermove',e=>{
   if (Math.hypot(dx,dy)<5 && !gesture.drag) return;
   gesture.drag=true;
   if (mode==='turn') {
-    tree.rotation.y=gesture.yaw+dx*.009;
+    azimuth=gesture.yaw-dx*.009;
     elevation=clamp(gesture.elevation+dy*.003,-.035,.50);
     updateView();
   } else if (!material && gesture.site!=null) {
@@ -322,7 +328,7 @@ function bind() {
     const select=document.getElementById(id);
     for (const [key,value] of Object.entries(options)) select.add(new Option(value.name,key));
   }
-  $('#tree-kind').onchange=e=>{switchTree(e.target.value);persist();say('Choose an ornament or drag to turn the tree.');};
+  $('#tree-kind').onchange=e=>{switchTree(e.target.value);persist();say('Choose an ornament or drag to look around.');};
   $('#setting').onchange=e=>commit({...draft,backdrop:e.target.value});
   $('#empty').onclick=()=>{setMode('turn');commit({...draft,items:[],light:'off'});};
   $('#starter').onclick=()=>{setMode('turn');commit({...initialDraft(),backdrop:draft.backdrop});};
@@ -353,7 +359,7 @@ function bind() {
     b.onclick=()=>{if(draft.light!==b.dataset.light) commit({...draft,light:b.dataset.light});};
   $('#more').onclick=()=>{zoom=clamp(zoom*1.18,.8,1.85);updateView();};
   $('#less').onclick=()=>{zoom=clamp(zoom/1.18,.8,1.85);updateView();};
-  $('#home').onclick=()=>{zoom=1;elevation=.115;tree.rotation.y=0;updateView();};
+  $('#home').onclick=()=>{zoom=1;elevation=.115;azimuth=0;updateView();};
   $('#photo').onclick=()=>{
     spotMesh.visible=false;selection.visible=false;
     renderer.render(scene,camera);

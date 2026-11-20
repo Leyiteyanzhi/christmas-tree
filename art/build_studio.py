@@ -90,15 +90,28 @@ def lathe(parent,name,mat,alpha,y0,y1,width,height,bottom):
             uv.append((middle+(right-left)*.488*x,v))
     surface(parent,name,mat,verts,strip_faces(slices+1,levels),uv)
 
-# The painted walls and floor meet on the floor line of the original illustration.
-def build_room(model, key):
+import sys
+sys.path.insert(0,str(HERE))
+from room_geometry import furnish
+
+def flat(name,rgb):
+    material=bpy.data.materials.new(name)
+    material.use_nodes=True
+    shader=material.node_tree.nodes.get('Principled BSDF')
+    shader.inputs['Base Color'].default_value=(*rgb,1)
+    shader.inputs['Roughness'].default_value=.87
+    return material
+
+def build_room(model,key):
     room=group(model)
     wall,_=painted(key,ASSETS/(key+'.webp'))
-    verts=[];uv=[]
-    for x,u in [(-14,0),(-4.7,.001),(4.7,.999),(14,1)]:
-        for y,z,v in [(-10,.196,0),(-1.75,.196,.001),(2.8,.196,.16),(2.8,5.75,1),(2.8,12,1)]:
-            verts.append((x,y,z));uv.append((u,v))
-    surface(room,'Painted cabin',wall,verts,[tuple(reversed(f)) for f in strip_faces(5,4)],uv,False)
+    wood,_=painted('Oiled boards',HERE/'textures'/'boards.jpg')
+    honey,_=painted('Honey oak',HERE/'textures'/'honey.jpg')
+    tint={'room':(.053,.113,.086),'market':(.072,.118,.145),'bakery':(.34,.128,.077)}[key]
+    materials=[flat('Walnut',(.102,.043,.021)),wood,honey,flat('Limewash',tint),
+        flat('Antique brass',(.55,.34,.10)),flat('Cream glaze',(.69,.56,.37)),
+        flat('Oxblood',(.26,.041,.042)),flat('Book cloth',(.043,.091,.103))]
+    furnish(room,key,wall,materials,surface)
 
 for model,key in [('Cabin','room'),('Market','market'),('Bakery','bakery')]:
     build_room(model,key)

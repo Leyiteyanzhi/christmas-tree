@@ -12,6 +12,6 @@ Pick an ornament, then tap the tree to place it. Tap Done placing to edit orname
 
 ## 3D studio
 
-Open `/studio/` from the same local server. Drag to rotate the tree, pinch or scroll to zoom, and select a material to show available hanging spots. Edit mode lets you move and remove decorations. Choose from three trees, three scenes and the same 28 decorations as the 2D studio. Each tree remembers its own layout, lights and setting. Floor decorations stay in place when the tree turns. Save photo exports the current view as a PNG.
+Open `/studio/` from the same local server. Drag to orbit the tree inside a furnished room, pinch or scroll to zoom, and select a material to show available hanging spots. Edit mode lets you move and remove decorations. Choose from three trees, three scenes and the same 28 decorations as the 2D studio. Each tree remembers its own layout, lights and setting. The tree and all decorations stay in place as the camera orbits. Save photo exports the current view as a PNG.
 
 The editable master scene is `art/Snow Window.blend`. To regenerate the meshopt-compressed GLB files, hanging spots, and master scene with Blender 5.2, run `blender --background --factory-startup --python-exit-code 1 --python art/build_studio.py`. The site bundles Three.js 0.180.0, GLTFLoader and MeshoptDecoder locally.
