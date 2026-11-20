@@ -136,7 +136,7 @@ function renderLights() {
   for (let i=0;i<bulbs.count;i++)
     bulbs.setColorAt(i,new T.Color(draft.light==='colour'?colour[i%4]:0xffdb90));
   bulbs.instanceColor.needsUpdate=true;
-  lamp.intensity=bulbs.visible?1.5:0;
+  lamp.intensity=bulbs.visible ? .14 : 0;
 }
 function rebuild() {
   ornaments.clear();
@@ -254,15 +254,15 @@ const lamp=new T.PointLight(0xffab50,1.5,4);
 lamp.position.set(.4,1.7,.75);
 tree.add(lamp);
 function illuminate() {
-  scene.add(new T.HemisphereLight(0xfff0d7,0x806151,1.50));
-  const key=new T.DirectionalLight(0xffdfb2,2.45);
+  scene.add(new T.HemisphereLight(0xfff2dd,0xb0a18a,1.8));
+  const key=new T.DirectionalLight(0xffeac7,1.5);
   key.position.set(-3,6,4);
   key.castShadow=true;
   Object.assign(key.shadow.camera,{left:-3,right:3,top:4,bottom:-3,near:.1,far:15});
   key.shadow.mapSize.set(1024,1024);
   key.shadow.normalBias=.019;
   scene.add(key);
-  const rim=new T.DirectionalLight(0xc3dcff,1.15);
+  const rim=new T.DirectionalLight(0xc3dcff,.7);
   rim.position.set(2,3,-2);scene.add(rim);
   const points=[];
   for (let i=0;i<=300;i++) {
@@ -271,7 +271,7 @@ function illuminate() {
     points.push(new T.Vector3(r*Math.sin(a),.83+2.43*f+.035*Math.sin(a*2),r*Math.cos(a)));
   }
   tree.add(new T.Line(new T.BufferGeometry().setFromPoints(points),new T.LineBasicMaterial({color:0x9d7948})));
-  bulbs=new T.InstancedMesh(new T.SphereGeometry(.026,8,6),new T.MeshBasicMaterial(),60);
+  bulbs=new T.InstancedMesh(new T.SphereGeometry(.017,8,6),new T.MeshBasicMaterial(),60);
   for (let i=0;i<60;i++) {
     const p=points[i*5];
     bulbs.setMatrixAt(i,new T.Matrix4().makeTranslation(p.x,p.y,p.z));
@@ -330,7 +330,7 @@ async function start() {
   scene.add(cabin);tree.add(evergreen);
   for (const root of [cabin,evergreen,...Object.values(models)]) {
     root.traverse(o=>{
-      if (o.isMesh) {o.receiveShadow=true;o.castShadow=root!==cabin;}
+      if (o.isMesh) {o.receiveShadow=root===cabin;o.castShadow=root!==cabin;}
     });
   }
   raw.forEach(p=>addSite(p,'branch'));
