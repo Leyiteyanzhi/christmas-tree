@@ -54,6 +54,7 @@ function updateView() {
   camera.lookAt(0,1.80,0);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
+  $('#home').textContent=Math.round(zoom*100)+'%';
   refreshSpots();
   draw();
 }
@@ -105,7 +106,7 @@ function persist() {
   drafts[activeTree]=draft;
   try {
     localStorage.setItem(store,JSON.stringify({activeTree,drafts}));
-    $('#saved').textContent='Draft saved on this device';
+    $('#saved').textContent='Draft saved';
   } catch { $('#saved').textContent='Storage unavailable · save a photo to keep your tree'; }
 }
 function commit(next) {
@@ -194,8 +195,8 @@ function rebuild() {
   controls();
 }
 function controls() {
-  $('#tree-kind').value=activeTree;
-  $('#setting').value=draft.backdrop;
+  for (const b of document.querySelectorAll('[data-tree]')) b.setAttribute('aria-pressed',b.dataset.tree===activeTree);
+  for (const b of document.querySelectorAll('[data-setting]')) b.setAttribute('aria-pressed',b.dataset.setting===draft.backdrop);
   $('#turn').setAttribute('aria-pressed',mode==='turn');
   $('#edit').setAttribute('aria-pressed',mode==='edit');
   for (const b of document.querySelectorAll('[data-key]')) b.setAttribute('aria-pressed',b.dataset.key===material);
@@ -203,6 +204,7 @@ function controls() {
   $('#undo').disabled=!past.length;
   $('#redo').disabled=!future.length;
   $('#remove').disabled=selected==null;
+  $('#remove').hidden=selected==null;
   refreshSpots();
   draw();
 }
@@ -323,23 +325,65 @@ function illuminate() {
   }
   lightString.add(bulbs);
 }
+function pictureButton(className,asset) {
+  const button=document.createElement('button');
+  button.type='button';
+  button.className=className;
+  const image=new Image();
+  image.src='../assets/'+asset+'.webp';
+  image.alt='';
+  button.append(image);
+  return button;
+}
+
 function bind() {
-  for (const [id,options] of [['tree-kind',trees],['setting',backdrops]]) {
-    const select=document.getElementById(id);
-    for (const [key,value] of Object.entries(options)) select.add(new Option(value.name,key));
+  for (const [key,{name,description}] of Object.entries(trees)) {
+    const button=pictureButton('tree-option',key);
+    button.dataset.tree=key;
+    const label=document.createElement('span');
+    const title=document.createElement('strong');
+    const detail=document.createElement('small');
+    title.textContent=name;
+    detail.textContent=description;
+    label.append(title,detail);
+    button.append(label);
+    button.onclick=()=>{
+      if (key===activeTree) return;
+      switchTree(key);persist();say('Choose an ornament or drag to look around.');
+    };
+    $('#tree-kind').append(button);
   }
-  $('#tree-kind').onchange=e=>{switchTree(e.target.value);persist();say('Choose an ornament or drag to look around.');};
-  $('#setting').onchange=e=>commit({...draft,backdrop:e.target.value});
+  for (const [key,{name}] of Object.entries(backdrops)) {
+    const button=pictureButton('backdrop-option',key+'-preview');
+    button.dataset.setting=key;
+    button.append(name);
+    button.onclick=()=>{if (draft.backdrop!==key) commit({...draft,backdrop:key});};
+    $('#setting').append(button);
+  }
   $('#empty').onclick=()=>{setMode('turn');commit({...draft,items:[],light:'off'});};
   $('#starter').onclick=()=>{setMode('turn');commit({...initialDraft(),backdrop:draft.backdrop});};
-  $('#category').onchange=e=>{
-    for (const b of $('#palette').children)
-      b.hidden=e.target.value!=='all' && items[b.dataset.key].category!==e.target.value;
-  };
+  for (const [key,label] of Object.entries({all:'All',ball:'Baubles',hanging:'Hanging',topper:'Toppers',floor:'Floor'})) {
+    const button=document.createElement('button');
+    button.type='button';
+    button.dataset.category=key;
+    button.textContent=label;
+    button.setAttribute('aria-pressed',key==='all');
+    button.onclick=()=>{
+      for (const tab of $('#category').children) tab.setAttribute('aria-pressed',tab===button);
+      let count=0;
+      for (const tile of $('#palette').children) {
+        tile.hidden=key!=='all' && items[tile.dataset.key].category!==key;
+        if (!tile.hidden) count++;
+      }
+      $('#palette').scrollTo(0,0);
+      $('#material-count').textContent=count+' items';
+    };
+    $('#category').append(button);
+  }
+  $('#material-count').textContent=Object.keys(items).length+' items';
   for (const [key,{name}] of Object.entries(items)) {
-    const b=document.createElement('button'),img=new Image();
-    img.src='../assets/'+key+'.webp';img.alt='';
-    b.append(img,name);b.dataset.key=key;
+    const b=pictureButton('item-option',key);
+    b.append(name);b.dataset.key=key;
     b.onclick=()=>{
       mode='edit';material=key;selected=null;
       say(type(key)==='top'?'Tap the glowing spot at the treetop.':type(key)==='floor'?'Tap a glowing spot on the tree skirt.':'Tap a glowing branch tip to hang '+name.toLowerCase()+'.');
@@ -413,6 +457,8 @@ async function start() {
   updateView();rebuild();setMode('turn');
   new ResizeObserver(updateView).observe(canvas);
 }
+$('#show-help').onclick=()=>$('#help-dialog').showModal();
+
 start().catch(error=>{
   console.error(error);
   say('The 3D cabin could not open. Reload to try again, or return to the 2D studio above.');

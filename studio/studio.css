@@ -1,40 +1,21 @@
-:root{color-scheme:dark;--paper:#f7ecd7;--ink:#152c24;--brass:#d6b579;--line:#96a58860}
-*{box-sizing:border-box}
-body{margin:0;background:#152c24;color:var(--paper);font:15px/1.45 system-ui,sans-serif}
-main{max-width:1480px;margin:auto;padding:22px clamp(12px,3vw,48px) 30px}
-header,.row,.scene-tools,.zoom{display:flex;align-items:center;gap:7px}
-header{justify-content:space-between;margin-bottom:18px}
-header a{color:#e3c998;text-underline-offset:4px;font-size:.85rem}
-h1,h2,legend{font-family:Georgia,serif;font-weight:500}
-h1{font-size:clamp(28px,3.8vw,52px);margin:3px 0 0;line-height:1.1}
-h2{font-size:27px;margin:0 0 14px}
-button{font:inherit;cursor:pointer;background:#233f34;color:var(--paper);border:1px solid var(--line);border-radius:7px;padding:8px 12px;min-height:42px}
-button:hover:enabled,button[aria-pressed=true]{border-color:var(--brass);background:#385142}
-button:focus-visible,a:focus-visible{outline:3px solid #ffcd83;outline-offset:2px}
-button:disabled{opacity:.45;cursor:default}
-#photo{background:#eed2a0;color:var(--ink);font-weight:650}
-.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,310px);gap:18px}
-.scene{position:relative;overflow:hidden;height:clamp(450px,75svh,820px);border:1px solid var(--brass);border-radius:14px;background:#372f22}
-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
-.scene-tools,.zoom{position:absolute;background:#132820ec;border-radius:9px;padding:3px}
-.scene-tools{top:12px;left:12px}.zoom{bottom:12px;right:12px}
-.scene-tools button,.zoom button{font-size:13px}
-aside{border:1px solid var(--line);border-radius:12px;background:#20382e;padding:18px;align-self:start}
-#palette{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-#palette button{display:flex;align-items:center;text-align:left;gap:5px;padding:5px;font-size:13px}
-#palette img{width:34px;height:38px;object-fit:contain}
-fieldset{border:0;padding:0;margin:20px 0 14px}
-legend{font-size:20px;margin-bottom:6px}
-.actions{border-top:1px solid var(--line);padding-top:14px}
-.row button{padding-inline:9px;font-size:13px}
-#hint{min-height:3em;margin:16px 0 5px}
-#saved{color:#d5cdb7}
-@media(max-width:740px){main{padding:12px 9px}.workspace{grid-template-columns:1fr;gap:9px}.scene{height:clamp(310px,55svh,530px)}header{margin-bottom:10px}aside{padding:13px}h2{font-size:21px;margin-bottom:7px}#palette{grid-template-columns:repeat(4,minmax(0,1fr))}#palette button{flex-direction:column;gap:1px;text-align:center}fieldset{margin-top:12px}.scene-tools{top:7px;left:7px}.zoom{bottom:7px;right:7px}#hint{min-height:0}}
-.pickers{display:grid;grid-template-columns:1fr;gap:7px}
-.pickers label,.filter{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
-select{min-width:0;max-width:78%;font:inherit;background:#192f27;color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px}
-.layouts{margin:10px 0 16px}
-.filter{margin-bottom:9px}
-#palette{max-height:260px;overflow:auto;padding:3px}
-#palette button[hidden]{display:none}
-@media(max-width:740px){#palette{max-height:166px}}
+/* The studio shares the illustrated panels and responsive layout of the 2D page. */
+#view { display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
+#view:active { cursor:grabbing; }
+.mode-controls { position:absolute; top:14px; right:14px; padding:2px; }
+.mode-controls button { font-size:12px; }
+.mode-controls [aria-pressed="true"] { color:var(--evergreen); background:var(--paper); }
+.mode-controls [aria-pressed="true"]:hover { background:var(--card); }
+.zoom-controls #home { min-width:50px; font-size:12px; font-variant-numeric:tabular-nums; }
+.remove-item { background:var(--wine); color:var(--card); border:1px solid var(--gold); border-radius:7px; }
+.categories { overflow-x:auto; }
+@media (min-width:781px) and (max-width:1050px) {
+  .categories { flex-wrap:wrap; justify-content:flex-start; }
+}
+@media (max-width:470px) {
+  .trees { grid-template-columns:1fr; }
+  .starts { grid-column:1; grid-row:3; display:flex; align-items:center; gap:8px; margin:5px 0; }
+  .starts legend { float:left; margin:0; }
+  .trees .backdrops { grid-template-columns:1fr; }
+  .backdrop-option { grid-template-columns:1fr; }
+  .backdrop-option img { width:100%; height:36px; object-fit:cover; }
+}

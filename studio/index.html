@@ -1,20 +1,102 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#172d26"><title>Snow Window · 3D Ornament Studio</title><link rel="icon" href="../assets/star.webp"><link rel="stylesheet" href="./studio.css"><script type="module" src="./studio.js"></script></head>
-<body><main>
-<header><div><a href="../">← Snow Window · 2D studio</a><h1>3D Ornament Studio</h1></div><button id="photo" disabled>Save photo</button></header>
-<div class="workspace">
-<section class="scene" aria-label="Christmas tree miniature">
-<canvas id="view" aria-label="Room view. Drag to orbit the tree. Choose an ornament, then tap a glowing spot."></canvas>
-<div class="scene-tools"><button id="turn" aria-pressed="true" disabled>Orbit view</button><button id="edit" aria-pressed="false" disabled>Edit ornaments</button></div>
-<div class="zoom"><button id="less" aria-label="Zoom out" disabled>−</button><button id="home" disabled>Reset view</button><button id="more" aria-label="Zoom in" disabled>+</button></div>
-</section>
-<aside><div class="pickers">
-<label>Tree <select id="tree-kind" disabled></select></label>
-<label>Scene <select id="setting" disabled></select></label></div>
-<div class="row layouts"><button id="empty" disabled>Empty tree</button><button id="starter" disabled>Starter layout</button></div>
-<h2>Ornament box</h2>
-<label class="filter">Category <select id="category" disabled><option value="all">All decorations</option><option value="ball">Baubles</option><option value="hanging">Hanging ornaments</option><option value="topper">Tree toppers</option><option value="floor">Under the tree</option></select></label><div id="palette"></div>
-<fieldset><legend>Tree lights</legend><div class="row" id="lights"><button data-light="off" disabled>Off</button><button data-light="warm" disabled>Warm</button><button data-light="colour" disabled>Colour</button></div></fieldset>
-<div class="row actions"><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="remove" disabled>Remove</button></div>
-<p id="hint" role="status">Opening the cabin…</p><small id="saved"></small></aside></div>
-</main></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#511d27">
+  <meta name="description" content="Pick a tree in a snowy cottage, hang the ornaments you like, and save a photo of your Christmas tree.">
+  <title>Snow Window · 3D Ornament Studio</title>
+  <link rel="icon" href="../assets/star.webp">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="studio.css">
+  <script type="module" src="studio.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand-copy">
+      <h1>Snow Window</h1>
+      <p>3D Ornament Studio</p>
+    </div>
+    <div class="masthead-actions">
+      <span id="saved" class="save-state" aria-live="polite"></span>
+      <a class="studio-link" href="../">2D studio</a>
+      <button type="button" id="show-help" class="help-button" aria-haspopup="dialog" aria-controls="help-dialog">How to play</button>
+      <button type="button" id="photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
+    </div>
+  </header>
+
+  <main class="workshop">
+    <aside class="trees panel" aria-labelledby="tree-title">
+      <h2 id="tree-title">Choose a tree</h2>
+      <div id="tree-kind" class="tree-options"></div>
+      <fieldset class="starts">
+        <legend>Starting layout</legend>
+        <div class="segmented">
+          <button type="button" id="empty">Empty tree</button>
+          <button type="button" id="starter">Starter</button>
+        </div>
+      </fieldset>
+      <section class="backdrops" aria-labelledby="backdrop-title">
+        <h2 id="backdrop-title">Change scene</h2>
+        <div id="setting" class="backdrop-options"></div>
+      </section>
+      <details class="inspiration">
+        <summary><span aria-hidden="true">✦</span> Vintage gold &amp; red tip</summary>
+        <p>Alternate clay-red and antique-gold baubles, save the big bow for the branch your eye hits first, then try warm white lights.</p>
+      </details>
+    </aside>
+
+    <section class="studio" aria-label="Decorating canvas">
+      <div class="picture">
+        <canvas id="view" aria-label="3D room. Drag to orbit the tree or tap a glowing spot to place an ornament."></canvas>
+        <div class="scene-top">
+          <div id="history" class="glass" aria-label="Edit history">
+            <button type="button" id="undo" title="Undo" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6 4 11l5 5M4 11h10a5 5 0 0 1 5 5v2"/></svg></button>
+            <button type="button" id="redo" title="Redo" aria-label="Redo" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 6 5 5-5 5m5-5H10a5 5 0 0 0-5 5v2"/></svg></button>
+          </div>
+        </div>
+        <div class="mode-controls glass" role="group" aria-label="Interaction">
+          <button id="turn" type="button" disabled>Orbit view</button>
+          <button id="edit" type="button" disabled>Edit ornaments</button>
+        </div>
+        <div class="scene-bottom">
+          <button type="button" class="remove-item" id="remove" hidden>Remove ornament</button>
+          <div class="glass zoom-controls" aria-label="Canvas zoom">
+            <button type="button" id="less" title="Zoom out" aria-label="Zoom out">−</button>
+            <button type="button" id="home" title="Reset to full view" aria-label="Reset to full view">100%</button>
+            <button type="button" id="more" title="Zoom in" aria-label="Zoom in">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="studio-footer">
+        <p id="hint" aria-live="polite">Opening the studio…</p>
+        <div class="lights">
+          <span aria-hidden="true">✧</span>
+          <span class="lights-label">Lights</span>
+          <div class="segmented" aria-label="Lights">
+            <button type="button" data-light="off" aria-pressed="false">Off</button>
+            <button type="button" data-light="warm" aria-pressed="true">Warm</button>
+            <button type="button" data-light="colour" aria-pressed="false">Color</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="materials panel" aria-labelledby="materials-title">
+      <div class="materials-heading"><h2 id="materials-title">Ornaments</h2><span id="material-count" class="material-count"></span></div>
+      <div id="category" class="categories" aria-label="Ornament categories"></div>
+      <div id="palette" class="item-options"></div>
+    </aside>
+  </main>
+
+  <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+    <div class="photo-heading"><h2 id="help-title">How to play</h2><form method="dialog"><button class="close" aria-label="Close">×</button></form></div>
+    <ol class="help-steps">
+      <li><h3>Choose your tree and room</h3><p>Start with an empty tree or a starter layout. Each tree keeps its own decorations.</p></li>
+      <li><h3>Decorate from any side</h3><p>Pick an ornament, then tap a glowing spot. Use Orbit view to walk around the tree. Pinch or scroll to zoom.</p></li>
+      <li><h3>Adjust and take a photo</h3><p>In Edit ornaments, select a decoration to move or remove it. Choose your lights and use Photo to save this view.</p></li>
+    </ol>
+    <form method="dialog" class="help-actions"><button class="primary">Back to studio</button></form>
+  </dialog>
+</body>
+</html>
