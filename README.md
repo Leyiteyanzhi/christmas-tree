@@ -1,4 +1,4 @@
-# Snow Window
+# christmas tree game
 
 Decorate a Christmas tree in a picture-book snowy night. Choose from three tree shapes, three scenes, twenty-eight ornaments, zoom and fine placement, lights, browser drafts, and PNG export. Optional 2.5D view adds a gentle background parallax.
 

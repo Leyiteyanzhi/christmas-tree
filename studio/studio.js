@@ -410,7 +410,7 @@ function bind() {
     canvas.toBlob(blob=>{
       if (!blob) {say('Could not create the photo. Please try again.');return;}
       const url=URL.createObjectURL(blob),a=document.createElement('a');
-      a.href=url;a.download='snow-window-3d.png';a.click();
+      a.href=url;a.download='christmas tree game - 3D.png';a.click();
       setTimeout(()=>URL.revokeObjectURL(url),30000);
     },'image/png');
     refreshSpots();draw();

@@ -1,4 +1,4 @@
-# Snow Window · Product Requirements
+# christmas tree game · Product Requirements
 
 Version 0.2 · November 19, 2026
 
