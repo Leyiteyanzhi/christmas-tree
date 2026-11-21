@@ -38,6 +38,7 @@ function draw() {
   frame = requestAnimationFrame(() => {
     frame = 0;
     renderer.render(scene,camera);
+    $('#loading').hidden = true;
   });
 }
 function updateView() {
@@ -461,5 +462,8 @@ $('#show-help').onclick=()=>$('#help-dialog').showModal();
 
 start().catch(error=>{
   console.error(error);
-  say('The 3D cabin could not open. Reload to try again, or return to the 2D studio above.');
+  cancelAnimationFrame(frame);
+  $('#loading-message').textContent = 'The 3D studio could not load.';
+  $('.loading-spinner').hidden = true;
+  $('#retry-loading').hidden = false;
 });

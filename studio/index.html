@@ -49,6 +49,13 @@
     <section class="studio" aria-label="Decorating canvas">
       <div class="picture">
         <canvas id="view" aria-label="3D room. Drag to orbit the tree or tap a glowing spot to place an ornament."></canvas>
+        <div id="loading" class="loading">
+          <div class="loading-card">
+            <span class="loading-spinner" aria-hidden="true">✦</span>
+            <p id="loading-message" role="status">Loading the studio…</p>
+            <a class="primary" id="retry-loading" href="" hidden>Try again</a>
+          </div>
+        </div>
         <div class="scene-top">
           <div id="history" class="glass" aria-label="Edit history">
             <button type="button" id="undo" title="Undo" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6 4 11l5 5M4 11h10a5 5 0 0 1 5 5v2"/></svg></button>
@@ -69,7 +76,7 @@
         </div>
       </div>
       <div class="studio-footer">
-        <p id="hint" aria-live="polite">Opening the studio…</p>
+        <p id="hint" aria-live="polite"></p>
         <div class="lights">
           <span aria-hidden="true">✧</span>
           <span class="lights-label">Lights</span>

@@ -98,11 +98,13 @@ function draw() {
   queued = true;
   requestAnimationFrame(() => {
     queued = false;
+    if (!ready) return;
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     renderScene(context, activeTree, current(), viewFor(), {
       selected, moving, marker, ghost: ghost?.item, valid: ghost?.valid,
       depth: depthMode, tilt,
     });
+    $('#loading').hidden = true;
   });
 }
 
@@ -628,7 +630,6 @@ try {
   loadDrafts();
   ready = true;
   paintInventory();
-  $('#loading').hidden = true;
   $('#take-photo').disabled = false;
   resize();
   setCamera(1, 0, 0);
@@ -636,6 +637,9 @@ try {
   save();
   new ResizeObserver(resize).observe(picture);
 } catch (error) {
-  $('#loading').textContent = 'Art failed to load. Refresh and try again.';
+  ready = false;
+  $('#loading-message').textContent = 'The studio could not load.';
+  $('.loading-spinner').hidden = true;
+  $('#retry-loading').hidden = false;
   console.error(error);
 }

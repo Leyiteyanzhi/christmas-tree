@@ -189,7 +189,33 @@ h1, h2 { font-family: var(--serif); }
 #scene:focus-visible { outline-color: #ffe1a5; outline-offset: -4px; }
 #scene:active { cursor: grabbing; }
 #scene.placing { cursor: crosshair; }
-.loading { position: absolute; top: 50%; inset-inline: 0; text-align: center; color: var(--card); pointer-events: none; padding-inline: 20px; }
+.loading {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+  color: var(--card);
+  background: radial-gradient(ellipse at center, #294738e8, #132923f5);
+}
+.loading-card { display: grid; justify-items: center; gap: 12px; }
+.loading-spinner {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid #e6bb7e45;
+  border-top-color: var(--gold);
+  color: var(--gold);
+  font-size: 20px;
+  animation: loading-spin 1.2s linear infinite;
+}
+.loading .primary { background: var(--card); color: var(--evergreen); text-decoration: none; }
+@keyframes loading-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { .loading-spinner { animation: none; } }
 .scene-top, .scene-bottom { position: absolute; display: flex; }
 .scene-top { top: 14px; left: 14px; }
 .scene-bottom { bottom: 14px; right: 14px; gap: 8px; }
