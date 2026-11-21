@@ -1,5 +1,4 @@
 """Closed, furnished rooms around the central decorating area (Blender Z up)."""
-from math import cos, sin, pi
 from collections import defaultdict
 
 def furnish(root, key, art, materials, surface):
@@ -28,13 +27,7 @@ def furnish(root, key, art, materials, surface):
     def frame(x,y,z,w,h):
         for side in (-1,1):box(x+side*w/2,y,z+h/2,.10,.13,h+.12,trim)
         for level in (z,z+h):box(x,y,level,w+.14,.16,.10,trim)
-    def turned(x,y,z,profile,mat,n=18):
-        for (h1,r1),(h2,r2) in zip(profile,profile[1:]):
-            for i in range(n):
-                a=i*2*pi/n;b=(i+1)*2*pi/n
-                quad([(x+r1*cos(a),y+r1*sin(a),z+h1),(x+r1*cos(b),y+r1*sin(b),z+h1),
-                      (x+r2*cos(b),y+r2*sin(b),z+h2),(x+r2*cos(a),y+r2*sin(a),z+h2)],mat)
-    trim,wood,honey,plaster,brass,ivory,cranberry,navy=materials
+    trim,wood,honey,plaster,brass,cranberry,pantry,decor=materials
     half=5.6;floor=.196;ceiling=5.75
     # Individual boards break up the floor grain without stretching a border pixel.
     for j in range(24):
@@ -48,15 +41,25 @@ def furnish(root, key, art, materials, surface):
     for x in (-4.2,-2.1,0,2.1,4.2):box(x,0,ceiling-.08,.17,11.2,.21,trim)
     for wall in range(4):
         box(0,half+.08,(ceiling+floor)/2,11.38,.16,ceiling-floor+.02,plaster)
+        # Match the plaster through the corner. The original painting sits
+        # between timber uprights, leaving a return of the same finish on both sides.
+        for i in range(4):
+            u0,u1=(0,1) if i%2==0 else (1,0)
+            panel((-1.5+i)*2.8,half-.012,floor,2.8,ceiling-floor,plaster,(u0,0,u1,1))
         if wall==0:
-            panel(0,half-.016,floor,half*2,ceiling-floor,art,(0,.16,1,1))
-        else:
-            for x in range(-5,6):
-                box(x,half-.06,.82,.91,.095,1.22,wood)
-                box(x,half-.11,.82,.79,.042,.97,trim)
-            box(0,half-.14,1.47,half*2,.21,.11,honey)
-        for x in (-half+.08,half-.08):box(x,half-.09,2.96,.18,.22,5.54,trim)
-        for z in (.255,5.52):box(0,half-.10,z,11.17,.22,.16,trim)
+            panel(0,half-.028,floor,9.48,ceiling-floor,art,(0,.16,1,1))
+            for x in (-4.78,4.78):
+                box(x,half-.10,2.96,.13,.17,5.54,trim)
+        # Skirting and crown mouldings turn every corner at the same elevation.
+        for x in (-half+.075,half-.075):
+            box(x,half-.078,2.96,.15,.16,5.54,trim)
+        for z,d,h,mat in [(.32,.19,.25,wood),(.47,.22,.052,honey),
+                          (5.48,.22,.14,trim),(5.38,.19,.055,honey)]:
+            box(0,half-d/2,z,11.20,d,h,mat)
+        if wall:
+            # A pair of graduated evergreen swags bridges each beam and side wall.
+            panel(-4.08,5.34,4.53,2.92,.98,decor['garland'],(0,0,1,1))
+            panel(4.08,5.34,4.53,2.92,.98,decor['garland'],(1,0,0,1))
     # Window seat and picture window on the west wall.
     wall=1
     panes={'room':(.105,.32,.267,.87),'bakery':(.82,.45,.94,.90),'market':(.02,.22,.92,.94)}
@@ -76,19 +79,33 @@ def furnish(root, key, art, materials, surface):
     box(-.63,5.265,1.85,.12,.14,.17,brass)
     panel(2.05,5.48,2.15,1.9,1.51,art,panes[key])
     frame(2.05,5.42,2.15,1.9,1.51)
-    # Freestanding bookcase with pottery, books and candles.
+    panel(-1.35,5.28,2.11,.83,.87,decor['wreath'],(0,0,1,1))
+    # Give the painted still life an actual cabinet with recessed compartments,
+    # shelf lips, side cheeks and a panelled cupboard below.
     wall=3
-    for x in (-1.92,1.92):box(x,5.13,1.98,.16,.78,3.58,trim)
-    box(0,5.47,1.98,3.89,.12,3.58,wood)
-    for level in (.36,1.36,2.42,3.69):box(0,5.08,level,4.06,.85,.13,honey)
-    for j in range(9):
-        h=.49+.17*sin(2.3*j)
-        box(-1.55+j*.20,5.05,.43+h/2,.16,.41,h,[navy,cranberry,ivory][j%3])
-        box(-1.55+j*.20,4.837,.52,.15,.018,.03,brass)
-    for x,h in [(-1.25,.60),(.38,.46),(1.17,.70)]:
-        turned(x,5.0,1.425,[(0,.16),(.12*h,.22),(.62*h,.29),(.84*h,.14),(h,.12),(h,.075)],ivory)
-    for x,h in [(-1.26,.48),(-.91,.31),(.80,.54),(1.14,.41)]:
-        turned(x,5.04,2.485,[(0,.15),(.045,.15),(.09,.075),(.13,.09)],brass)
-        turned(x,5.04,2.61,[(0,.067),(h,.067),(h,.001)],ivory)
+    for x in (-1.60,1.60):
+        box(x,5.17,1.94,.15,.65,3.48,trim)
+    box(0,5.43,1.94,3.31,.15,3.48,wood)
+    # The bakery source contains three hand-painted rows of jars, gifts and biscuits.
+    rows=[(1.22,.69,(.036,.415,.222,.53)),
+                   (2.03,.66,(.035,.543,.222,.64)),
+                   (2.81,.68,(.023,.65,.219,.795))]
+    if key=='market':
+        pantry=art
+        rows=[(1.22,.69,(.023,.333,.265,.410)),
+              (2.03,.66,(.80,.336,.968,.419)),
+              (2.81,.68,(.785,.426,.966,.520))]
+    for i,(z,h,uv) in enumerate(rows):
+        panel(-.78,5.32,z,1.50,h,pantry,uv)
+        panel(.78,5.32,z,1.50,h,pantry,rows[(i+1)%len(rows)][2])
+        box(0,5.17,z+h/2,.06,.35,h,trim)
+        box(0,5.10,z-.053,3.38,.65,.11,honey)
+        box(0,4.78,z-.085,3.40,.07,.042,trim)
+    for x in (-.775,.775):
+        box(x,5.10,.72,1.49,.54,.97,wood)
+        box(x,4.80,.72,1.24,.055,.70,honey)
+        box(x+(.51 if x<0 else -.51),4.74,.90,.075,.09,.075,brass)
+    box(0,5.11,3.58,3.48,.74,.14,wood)
+    box(0,5.11,3.68,3.63,.79,.09,honey)
     for mat,(verts,faces,uv) in batches.items():
         surface(root,mat.name,mat,verts,faces,uv,False)

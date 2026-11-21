@@ -105,12 +105,16 @@ def flat(name,rgb):
 def build_room(model,key):
     room=group(model)
     wall,_=painted(key,ASSETS/(key+'.webp'))
-    wood,_=painted('Oiled boards',HERE/'textures'/'boards.jpg')
-    honey,_=painted('Honey oak',HERE/'textures'/'honey.jpg')
-    tint={'room':(.053,.113,.086),'market':(.072,.118,.145),'bakery':(.34,.128,.077)}[key]
-    materials=[flat('Walnut',(.102,.043,.021)),wood,honey,flat('Limewash',tint),
-        flat('Antique brass',(.55,.34,.10)),flat('Cream glaze',(.69,.56,.37)),
-        flat('Oxblood',(.26,.041,.042)),flat('Book cloth',(.043,.091,.103))]
+    def finish(label,file):
+        return painted(label,HERE/'textures'/file)[0]
+    wood=finish('Painted boards','dark-timber.jpg')
+    honey=finish('Honey oak','warm-timber.jpg')
+    plaster=finish(key+' painted plaster',key+'-plaster.jpg')
+    walnut=finish('Carved walnut','dark-timber.jpg')
+    pantry=wall if key=='bakery' else painted('Painted pantry shelves',ASSETS/'bakery.webp')[0]
+    decor={k:painted(k,ASSETS/(k+'.webp'),True)[0] for k in ['garland','wreath']}
+    materials=[walnut,wood,honey,plaster,flat('Antique brass',(.52,.29,.08)),
+        flat('Oxblood',(.26,.041,.042)),pantry,decor]
     furnish(room,key,wall,materials,surface)
 
 for model,key in [('Cabin','room'),('Market','market'),('Bakery','bakery')]:
