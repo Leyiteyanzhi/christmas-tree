@@ -1,21 +1,77 @@
-/* The studio shares the illustrated panels and responsive layout of the 2D page. */
-#view { display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
-#view:active { cursor:grabbing; }
-.mode-controls { position:absolute; top:14px; right:14px; padding:2px; }
-.mode-controls button { font-size:12px; }
-.mode-controls [aria-pressed="true"] { color:var(--evergreen); background:var(--paper); }
-.mode-controls [aria-pressed="true"]:hover { background:var(--card); }
-.zoom-controls #home { min-width:50px; font-size:12px; font-variant-numeric:tabular-nums; }
-.remove-item { background:var(--wine); color:var(--card); border:1px solid var(--gold); border-radius:7px; }
-.categories { overflow-x:auto; }
-@media (min-width:781px) and (max-width:1050px) {
-  .categories { flex-wrap:wrap; justify-content:flex-start; }
+/* The studio shares the illustrated panels and responsive layout of the 2D page,
+   with elevated frosted-glass cinema viewport controls for the refactored 3D stage. */
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
 }
-@media (max-width:470px) {
-  .trees { grid-template-columns:1fr; }
-  .starts { grid-column:1; grid-row:3; display:flex; align-items:center; gap:8px; margin:5px 0; }
-  .starts legend { float:left; margin:0; }
-  .trees .backdrops { grid-template-columns:1fr; }
-  .backdrop-option { grid-template-columns:1fr; }
-  .backdrop-option img { width:100%; height:36px; object-fit:cover; }
+#view:active { cursor: grabbing; }
+
+.picture {
+  background: radial-gradient(ellipse at 50% 42%, #1d302a, #0e1917 85%);
+  box-shadow: 0 0 0 3px #2d201fb8, 0 18px 44px #180812b8;
+}
+.picture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 62%, rgba(8, 12, 14, 0.34) 100%);
+}
+.picture::after { z-index: 2; }
+.scene-top, .mode-controls, .scene-bottom { z-index: 3; }
+
+.glass {
+  background: rgba(16, 30, 27, 0.72);
+  backdrop-filter: blur(12px) saturate(1.25);
+  -webkit-backdrop-filter: blur(12px) saturate(1.25);
+  border: 1px solid rgba(244, 215, 151, 0.38);
+  box-shadow: 0 8px 24px rgba(7, 12, 12, 0.35), inset 0 1px 0 rgba(255, 245, 215, 0.14);
+}
+.glass button {
+  transition: background-color 160ms ease, color 160ms ease, transform 120ms ease;
+}
+.glass button:active:not(:disabled) { transform: scale(0.96); }
+
+.mode-controls { position: absolute; top: 14px; right: 14px; padding: 3px; gap: 2px; }
+.mode-controls button { font-size: 12px; padding: 0 12px; font-weight: 600; letter-spacing: 0.02em; }
+.mode-controls [aria-pressed="true"] {
+  color: var(--evergreen);
+  background: linear-gradient(180deg, #fff6e0, #efe0be);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+.mode-controls [aria-pressed="true"]:hover { background: var(--card); }
+
+.zoom-controls #home { min-width: 50px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.remove-item {
+  background: linear-gradient(180deg, #6d2633, #511d27);
+  color: var(--card);
+  border: 1px solid rgba(230, 187, 126, 0.75);
+  border-radius: 8px;
+  padding: 0 14px;
+  min-height: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(18, 6, 10, 0.35);
+}
+.remove-item:hover:not(:disabled) { background: #7a2c3a; }
+
+.categories { overflow-x: auto; }
+@media (min-width: 781px) and (max-width: 1050px) {
+  .categories { flex-wrap: wrap; justify-content: flex-start; }
+}
+@media (max-width: 470px) {
+  .scene-top { top: 8px; left: 8px; gap: 4px; }
+  .scene-top .glass button { min-width: 32px; min-height: 34px; padding: 0 4px; }
+  .mode-controls { top: 8px; right: 8px; }
+  .mode-controls button { font-size: 11px; min-height: 34px; padding: 0 7px; }
+  .trees { grid-template-columns: 1fr; }
+  .starts { grid-column: 1; grid-row: 3; display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+  .starts legend { float: left; margin: 0; }
+  .trees .backdrops { grid-template-columns: 1fr; }
+  .backdrop-option { grid-template-columns: 1fr; }
+  .backdrop-option img { width: 100%; height: 36px; object-fit: cover; }
 }

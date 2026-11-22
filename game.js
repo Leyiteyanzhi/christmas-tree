@@ -2,6 +2,7 @@ import {
   WIDTH, HEIGHT, CENTER, FLOOR, trees, backdrops, items, isFloor, isTopper, source, loadArt,
   treeBox, anchorPoint, starter, matchesAt, renderScene,
 } from './scene.js';
+import { setupTray, setupWorks, setupFullscreen, workFile, isWorkFile } from './workshop-tools.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#scene');
@@ -52,6 +53,13 @@ const drafts = {};
 const histories = {};
 const current = () => drafts[activeTree];
 const history = () => histories[activeTree];
+const tray = setupTray($('.materials'), $('#item-options'), tile => tile.dataset.item,
+  () => $('#categories [data-category=all]')?.click());
+
+function validOrnament(item) {
+  return item && Object.hasOwn(items, item.key) && typeof item.id === 'string'
+    && [item.x, item.y, item.angle].every(Number.isFinite);
+}
 
 const defaultHint = 'Pick an ornament, then tap a branch to hang it.';
 function say(message = defaultHint) {
@@ -80,8 +88,7 @@ function loadDrafts() {
     const valid = Array.isArray(saved?.items) && ['off', 'warm', 'color'].includes(saved.light);
     const draft = valid ? {
       light: saved.light,
-      items: saved.items.filter(item => item && Object.hasOwn(items, item.key)
-        && typeof item.id === 'string' && [item.x, item.y, item.angle].every(Number.isFinite)),
+      items: saved.items.filter(validOrnament),
     } : key === 'pine' ? starter(key) : { light: 'off', items: [] };
     drafts[key] = { ...draft, backdrop: Object.hasOwn(backdrops, saved?.backdrop) ? saved.backdrop : 'room' };
     histories[key] = { undo: [], redo: [] };
@@ -256,6 +263,7 @@ function chooseItem(key) {
   if (!ready) return;
   resetSelection();
   placing = key;
+  tray.picked(key);
   say(isTopper(key) ? 'Tap near the tip and it will snap to the top.' : isFloor(key)
     ? 'Tap near the base to place it along the floor.'
     : 'Tap a branch to hang it. You can place the same item again.');
@@ -274,6 +282,7 @@ function paintInventory() {
     return opt;
   }));
   $('#item-options').scrollLeft = 0;
+  tray.order();
 }
 
 for (const [key, tree] of Object.entries(trees)) {
@@ -629,8 +638,23 @@ try {
   await loadArt();
   loadDrafts();
   ready = true;
+  setupWorks({
+    mode: '2d',
+    snapshot: () => workFile('2d', activeTree, current()),
+    validate: work => isWorkFile(work, '2d', trees, backdrops, ['off', 'warm', 'color'])
+      && work.draft.items.every(validOrnament)
+      && new Set(work.draft.items.map(item => item.id)).size === work.draft.items.length,
+    open: work => {
+      chooseTree(work.tree);
+      resetSelection();
+      commit(work.draft);
+      say('Work opened. Pick an ornament to keep decorating.');
+    },
+  });
+  $('#show-works').disabled = false;
   paintInventory();
   $('#take-photo').disabled = false;
+  setupFullscreen($('#fullscreen'), resize);
   resize();
   setCamera(1, 0, 0);
   updatePanels();
