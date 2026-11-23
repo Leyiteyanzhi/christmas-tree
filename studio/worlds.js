@@ -5,6 +5,12 @@ import {
   cobblestoneTextures,
   bakeryTileTextures,
   plazaPlinthTexture,
+  woodTextures,
+  brickTextures,
+  alpineVistaTexture,
+  chaletInteriorTexture,
+  signTexture,
+  wallWashTexture,
   rugTexture,
   awningTexture,
   stoneTexture,
@@ -55,106 +61,147 @@ function addGlow(parent, x, y, z, color, scale, opacity = 0.72) {
 }
 
 /**
- * Shared sculptural props
+ * Soft architectural light wash projected onto walls or floors (zero extra shadow cost!).
  */
-function createBrassMaterial(color = 0xd3a459, roughness = 0.28) {
+function addLightWash(parent, x, y, z, w, h, color, opacity = 0.36, rot = [0, 0, 0]) {
+  const mat = new T.MeshBasicMaterial({
+    map: wallWashTexture(),
+    color,
+    transparent: true,
+    opacity,
+    blending: T.AdditiveBlending,
+    depthWrite: false,
+  });
+  const p = mesh(new T.PlaneGeometry(w, h), mat, { pos: [x, y, z], rot, receive: false });
+  parent.add(p);
+  return p;
+}
+
+function createBrassMaterial(color = 0xd6a65a, roughness = 0.26) {
   return new T.MeshStandardMaterial({
     color,
-    metalness: 0.82,
+    metalness: 0.84,
     roughness,
-    envMapIntensity: 1.45,
+    envMapIntensity: 1.5,
   });
 }
 
-function createWreath(radius = 0.42, evergreenMat, berryMat, velvetMat) {
-  const g = new T.Group();
-  const baseTorus = mesh(new T.TorusGeometry(radius, radius * 0.22, 10, 28), evergreenMat, { cast: false, receive: true });
-  g.add(baseTorus);
+function createWoodMaterial(key, opts, roughness = 0.54) {
+  const tex = woodTextures(key, opts);
+  return new T.MeshStandardMaterial({
+    map: tex.map,
+    bumpMap: tex.bumpMap,
+    bumpScale: 0.015,
+    roughness,
+    metalness: 0.05,
+    envMapIntensity: 0.95,
+  });
+}
 
-  const tuftGeo = new T.ConeGeometry(radius * 0.17, radius * 0.34, 6);
-  const count = 18;
+/**
+ * Lush 3D evergreen pine wreath with clustered pine needles, red berries & velvet bow.
+ */
+function createWreath(radius = 0.44, evergreenMat, berryMat, velvetMat) {
+  const g = new T.Group();
+  g.add(mesh(new T.TorusGeometry(radius, radius * 0.22, 10, 28), evergreenMat));
+  const tuftGeo = new T.ConeGeometry(radius * 0.17, radius * 0.36, 6);
+  const count = 22;
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2;
-    const tuft = mesh(tuftGeo, evergreenMat, {
-      pos: [Math.cos(a) * radius, Math.sin(a) * radius, 0.03],
-      rot: [0.35, 0, a - Math.PI / 2 + 0.35],
-    });
-    g.add(tuft);
+    g.add(mesh(tuftGeo, evergreenMat, {
+      pos: [Math.cos(a) * radius, Math.sin(a) * radius, 0.035],
+      rot: [0.35, 0, a - Math.PI / 2 + 0.38],
+    }));
     if (i % 3 === 0) {
-      const berry = mesh(new T.SphereGeometry(radius * 0.065, 8, 6), berryMat, {
-        pos: [Math.cos(a + 0.1) * (radius * 0.98), Math.sin(a + 0.1) * (radius * 0.98), radius * 0.22],
-      });
-      g.add(berry);
+      g.add(mesh(new T.SphereGeometry(radius * 0.062, 8, 6), berryMat, {
+        pos: [Math.cos(a + 0.1) * radius, Math.sin(a + 0.1) * radius, radius * 0.22],
+      }));
     }
   }
+  const loopGeo = new T.TorusGeometry(radius * 0.17, radius * 0.058, 8, 16);
+  g.add(mesh(loopGeo, velvetMat, { pos: [-radius * 0.17, -radius * 0.95, radius * 0.22], rot: [0.15, 0.32, 0.35], scale: [1.28, 0.78, 0.6] }));
+  g.add(mesh(loopGeo, velvetMat, { pos: [radius * 0.17, -radius * 0.95, radius * 0.22], rot: [0.15, -0.32, -0.35], scale: [1.28, 0.78, 0.6] }));
+  g.add(mesh(new T.SphereGeometry(radius * 0.085, 10, 8), velvetMat, { pos: [0, -radius * 0.96, radius * 0.26] }));
+  const tailGeo = new T.BoxGeometry(radius * 0.11, radius * 0.48, 0.02);
+  g.add(mesh(tailGeo, velvetMat, { pos: [-radius * 0.10, -radius * 1.24, radius * 0.20], rot: [0, 0, -0.22] }));
+  g.add(mesh(tailGeo, velvetMat, { pos: [radius * 0.10, -radius * 1.24, radius * 0.20], rot: [0, 0, 0.22] }));
+  return g;
+}
 
-  // Velvet bow at bottom
-  const loopGeo = new T.TorusGeometry(radius * 0.16, radius * 0.055, 8, 16);
-  const leftLoop = mesh(loopGeo, velvetMat, {
-    pos: [-radius * 0.17, -radius * 0.95, radius * 0.22],
-    rot: [0.15, 0.3, 0.35],
-    scale: [1.25, 0.78, 0.6],
-  });
-  const rightLoop = mesh(loopGeo, velvetMat, {
-    pos: [radius * 0.17, -radius * 0.95, radius * 0.22],
-    rot: [0.15, -0.3, -0.35],
-    scale: [1.25, 0.78, 0.6],
-  });
-  const knot = mesh(new T.SphereGeometry(radius * 0.08, 10, 8), velvetMat, {
-    pos: [0, -radius * 0.96, radius * 0.26],
-  });
-  const tailGeo = new T.BoxGeometry(radius * 0.11, radius * 0.45, 0.02);
-  const tailL = mesh(tailGeo, velvetMat, { pos: [-radius * 0.10, -radius * 1.24, radius * 0.20], rot: [0, 0, -0.22] });
-  const tailR = mesh(tailGeo, velvetMat, { pos: [radius * 0.10, -radius * 1.24, radius * 0.20], rot: [0, 0, 0.22] });
-  g.add(leftLoop, rightLoop, knot, tailL, tailR);
+/**
+ * Draped 3D evergreen pine garland with crimson berries & warm micro fairy lights!
+ */
+function createPineGarland(width, sag, evergreenMat, berryMat, lit = true) {
+  const g = new T.Group();
+  const steps = Math.max(12, Math.round(width * 8));
+  const tuftGeo = new T.ConeGeometry(0.068, 0.16, 6);
+  for (let i = 0; i <= steps; i++) {
+    const f = i / steps;
+    const x = (f - 0.5) * width;
+    const y = -Math.sin(f * Math.PI) * sag;
+    const thickness = 0.85 + Math.sin(f * Math.PI) * 0.35;
+    for (const s of [-1, 0, 1]) {
+      g.add(mesh(tuftGeo, evergreenMat, {
+        pos: [x, y + s * 0.025, Math.abs(s) * 0.02],
+        rot: [0.35 + s * 0.35, i * 0.7, (f - 0.5) * 0.8 + s * 0.5],
+        scale: thickness,
+      }));
+    }
+    if (i % 3 === 1) {
+      g.add(mesh(new T.SphereGeometry(0.024, 7, 6), berryMat, { pos: [x, y - 0.01, 0.075] }));
+    }
+    if (lit && i % 2 === 1 && i < steps) {
+      addGlow(g, x, y + 0.01, 0.095, 0xffd280, 0.26, 0.65);
+    }
+  }
   return g;
 }
 
 function createCandle(height, radius, brassMat, waxMat, flameMat) {
   const g = new T.Group();
-  // Dish + stem
   g.add(mesh(new T.CylinderGeometry(radius * 1.85, radius * 2.1, 0.025, 16), brassMat, { pos: [0, 0.012, 0] }));
   g.add(mesh(new T.CylinderGeometry(radius * 0.55, radius * 0.8, 0.05, 12), brassMat, { pos: [0, 0.045, 0] }));
-  // Wax pillar
   g.add(mesh(new T.CylinderGeometry(radius, radius * 1.04, height, 14), waxMat, { pos: [0, 0.07 + height / 2, 0] }));
-  // Glowing flame teardrop
   const flame = mesh(new T.ConeGeometry(radius * 0.48, radius * 1.6, 8), flameMat, {
     pos: [0, 0.08 + height + radius * 0.7, 0],
     receive: false,
   });
   g.add(flame);
-  const halo = addGlow(g, 0, 0.08 + height + radius * 0.9, 0, 0xffc66e, 0.34, 0.68);
+  const halo = addGlow(g, 0, 0.08 + height + radius * 0.9, 0, 0xffc66e, 0.38, 0.72);
   return { group: g, flame, halo };
 }
 
-function createWallSconce(brassMat, glassMat) {
+function createWallSconce(brassMat, glassMat, washColor = 0xffc472) {
   const g = new T.Group();
-  g.add(mesh(new T.CylinderGeometry(0.085, 0.095, 0.028, 18), brassMat, { rot: [Math.PI / 2, 0, 0] }));
-  g.add(mesh(new T.CylinderGeometry(0.012, 0.012, 0.20, 8), brassMat, { pos: [0, -0.05, 0.09], rot: [Math.PI / 2, 0, 0] }));
-  g.add(mesh(new T.CylinderGeometry(0.015, 0.015, 0.24, 8), brassMat, { pos: [0, 0.06, 0.18] }));
-  g.add(mesh(new T.CylinderGeometry(0.055, 0.042, 0.22, 16), glassMat, { pos: [0, 0.21, 0.18], receive: false }));
-  addGlow(g, 0, 0.23, 0.20, 0xffcf82, 0.72, 0.55);
+  g.add(mesh(new T.CylinderGeometry(0.09, 0.10, 0.03, 20), brassMat, { rot: [Math.PI / 2, 0, 0] }));
+  g.add(mesh(new T.CylinderGeometry(0.013, 0.013, 0.20, 8), brassMat, { pos: [0, -0.05, 0.09], rot: [Math.PI / 2, 0, 0] }));
+  g.add(mesh(new T.CylinderGeometry(0.016, 0.016, 0.24, 8), brassMat, { pos: [0, 0.06, 0.18] }));
+  g.add(mesh(new T.CylinderGeometry(0.058, 0.044, 0.24, 16), glassMat, { pos: [0, 0.22, 0.18], receive: false }));
+  addGlow(g, 0, 0.24, 0.22, 0xffd084, 0.78, 0.62);
+  // Soft warm architectural up/down wash on the wall behind the sconce!
+  addLightWash(g, 0, 0.34, 0.025, 1.55, 2.25, washColor, 0.34);
   return g;
 }
 
 /**
- * Custom soft-circle snow/mote particle field (zero harsh square pixels).
+ * Architectural decorative wall molding frame (boiserie) to give every wall depth & elegance.
  */
+function addBoiserieFrame(parent, x, y, z, w, h, trimMat) {
+  const t = 0.045;
+  const d = 0.032;
+  parent.add(mesh(new T.BoxGeometry(w, t, d), trimMat, { pos: [x, y + h / 2, z] }));
+  parent.add(mesh(new T.BoxGeometry(w, t, d), trimMat, { pos: [x, y - h / 2, z] }));
+  parent.add(mesh(new T.BoxGeometry(t, h, d), trimMat, { pos: [x - w / 2, y, z] }));
+  parent.add(mesh(new T.BoxGeometry(t, h, d), trimMat, { pos: [x + w / 2, y, z] }));
+}
+
 function createParticleField({
-  count,
-  bounds,
-  color = 0xffffff,
-  size = 18,
-  speedY = -0.35,
-  sway = 0.22,
-  opacity = 0.72,
-  seed = 101,
+  count, bounds, color = 0xffffff, size = 18, speedY = -0.35, sway = 0.22, opacity = 0.72, seed = 101,
 }) {
   const rand = seeded(seed);
   const positions = new Float32Array(count * 3);
   const phases = new Float32Array(count);
   const scales = new Float32Array(count);
-
   const [minX, maxX, minY, maxY, minZ, maxZ] = bounds;
   for (let i = 0; i < count; i++) {
     positions[i * 3] = minX + rand() * (maxX - minX);
@@ -163,12 +210,10 @@ function createParticleField({
     phases[i] = rand() * Math.PI * 2;
     scales[i] = 0.55 + rand() * 0.95;
   }
-
   const geo = new T.BufferGeometry();
   geo.setAttribute('position', new T.BufferAttribute(positions, 3));
   geo.setAttribute('aPhase', new T.BufferAttribute(phases, 1));
   geo.setAttribute('aScale', new T.BufferAttribute(scales, 1));
-
   const mat = new T.ShaderMaterial({
     transparent: true,
     depthWrite: false,
@@ -186,12 +231,7 @@ function createParticleField({
     vertexShader: `
       attribute float aPhase;
       attribute float aScale;
-      uniform float uTime;
-      uniform float uSize;
-      uniform float uMinY;
-      uniform float uHeight;
-      uniform float uSpeedY;
-      uniform float uSway;
+      uniform float uTime, uSize, uMinY, uHeight, uSpeedY, uSway;
       varying float vAlpha;
       void main() {
         vec3 p = position;
@@ -221,87 +261,16 @@ function createParticleField({
       }
     `,
   });
-
   const points = new T.Points(geo, mat);
   points.frustumCulled = false;
-  return {
-    object: points,
-    update(time) {
-      mat.uniforms.uTime.value = time;
-    },
-  };
+  return { object: points, update(time) { mat.uniforms.uTime.value = time; } };
 }
 
-/**
- * Hand-painted miniature winter landscape for the framed artwork above the cabin mantel.
- */
-function framedArtTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 192;
-  const ctx = canvas.getContext('2d');
-  const sky = ctx.createLinearGradient(0, 0, 0, 192);
-  sky.addColorStop(0, '#132641');
-  sky.addColorStop(0.55, '#2b4769');
-  sky.addColorStop(1, '#c9b498');
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, 256, 192);
-
-  // Moon
-  ctx.fillStyle = '#fff0c8';
-  ctx.beginPath();
-  ctx.arc(192, 46, 14, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Distant snowy mountain ridge
-  ctx.fillStyle = '#6c839e';
-  ctx.beginPath();
-  ctx.moveTo(0, 125);
-  ctx.lineTo(54, 82);
-  ctx.lineTo(122, 114);
-  ctx.lineTo(188, 74);
-  ctx.lineTo(256, 118);
-  ctx.lineTo(256, 192);
-  ctx.lineTo(0, 192);
-  ctx.fill();
-
-  // Snowy foreground hills
-  ctx.fillStyle = '#d7dfe8';
-  ctx.beginPath();
-  ctx.moveTo(0, 142);
-  ctx.quadraticCurveTo(95, 118, 256, 146);
-  ctx.lineTo(256, 192);
-  ctx.lineTo(0, 192);
-  ctx.fill();
-
-  // Pine silhouettes + cozy cottage light
-  ctx.fillStyle = '#183029';
-  for (const [x, h] of [[28, 44], [52, 54], [76, 38], [212, 48], [234, 40]]) {
-    ctx.beginPath();
-    ctx.moveTo(x, 148 - h);
-    ctx.lineTo(x - 14, 152);
-    ctx.lineTo(x + 14, 152);
-    ctx.fill();
-  }
-  ctx.fillStyle = '#5c3424';
-  ctx.fillRect(118, 126, 26, 18);
-  ctx.fillStyle = '#ffd178';
-  ctx.fillRect(123, 132, 6, 7);
-  ctx.fillRect(133, 132, 6, 7);
-
-  const tex = new T.CanvasTexture(canvas);
-  tex.colorSpace = T.SRGBColorSpace;
-  return tex;
-}
-
-/**
- * Shared circular grounding shadow under the tree (subtle contact darkening).
- */
 function createContactShadow(radius = 1.42) {
   const mat = new T.MeshBasicMaterial({
     map: contactShadowTexture(),
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.74,
     depthWrite: false,
   });
   const disc = new T.Mesh(new T.CircleGeometry(radius, 40), mat);
@@ -312,7 +281,7 @@ function createContactShadow(radius = 1.42) {
 
 /**
  * ============================================================================
- * WORLD 1: SNOWY CABIN — "Nordic Alpine Hearth Salon"
+ * WORLD 1: SNOWY CABIN — "Nordic Alpine Hearth Salon" (High-Craft Architectural Edition)
  * ============================================================================
  */
 function buildCabinWorld() {
@@ -320,343 +289,270 @@ function buildCabinWorld() {
   const animators = [];
 
   const parquet = parquetTextures();
-  const plaster = plasterTextures('cabin-emerald', '#1f3931', '#152823', 4, 2);
+  const plaster = plasterTextures('cabin-emerald', '#213f36', '#172e27', 4, 2);
   const stone = stoneTexture();
-  const brass = createBrassMaterial(0xd4a459, 0.27);
-  const darkWalnut = new T.MeshStandardMaterial({ color: 0x3b2316, roughness: 0.56, metalness: 0.06, envMapIntensity: 0.9 });
-  const warmOak = new T.MeshStandardMaterial({ color: 0x6b4328, roughness: 0.48, metalness: 0.05, envMapIntensity: 0.95 });
-  const velvet = new T.MeshPhysicalMaterial({ color: 0x6e1c26, roughness: 0.82, sheen: 0.65, sheenColor: new T.Color(0xc44854), sheenRoughness: 0.6 });
-  const creamFabric = new T.MeshStandardMaterial({ color: 0xebe0ca, roughness: 0.86 });
-  const evergreen = new T.MeshStandardMaterial({ color: 0x204735, roughness: 0.78 });
-  const berry = new T.MeshPhysicalMaterial({ color: 0xa81f24, roughness: 0.25, clearcoat: 0.8 });
-  const waxMat = new T.MeshStandardMaterial({ color: 0xf7ecd4, roughness: 0.65 });
-  const flameMat = new T.MeshBasicMaterial({ color: 0xffd27a });
-  const sconceGlass = new T.MeshStandardMaterial({
-    color: 0xfff0d0,
-    emissive: 0xffbf66,
-    emissiveIntensity: 1.55,
-    roughness: 0.25,
-  });
+  const brass = createBrassMaterial(0xd8a85c, 0.25);
+  const darkWalnut = createWoodMaterial('walnut-dark', { base: [64, 38, 24], grain: [26, 14, 8], hi: [108, 68, 42], repeatX: 2, repeatY: 2 }, 0.52);
+  const warmOak = createWoodMaterial('walnut-warm', { base: [104, 66, 39], grain: [48, 28, 15], hi: [148, 102, 64], repeatX: 2, repeatY: 2 }, 0.46);
+  const velvet = new T.MeshPhysicalMaterial({ color: 0x731d28, roughness: 0.80, sheen: 0.72, sheenColor: new T.Color(0xcf5260), sheenRoughness: 0.55 });
+  const creamFabric = new T.MeshStandardMaterial({ color: 0xefe4ce, roughness: 0.86 });
+  const evergreen = new T.MeshStandardMaterial({ color: 0x1e4734, roughness: 0.78 });
+  const berry = new T.MeshPhysicalMaterial({ color: 0xb01e24, roughness: 0.22, clearcoat: 0.85 });
+  const waxMat = new T.MeshStandardMaterial({ color: 0xf7ecd4, roughness: 0.64 });
+  const flameMat = new T.MeshBasicMaterial({ color: 0xffd582 });
+  const sconceGlass = new T.MeshStandardMaterial({ color: 0xfff2d4, emissive: 0xffc068, emissiveIntensity: 1.65, roughness: 0.22 });
 
-  const R = 6.0; // Room half-span
-  const H = 5.4;
+  const R = 6.0;
+  const H = 5.45;
 
-  // 1. Herringbone walnut parquet floor
+  // 1. Satin herringbone walnut parquet floor
   const floorMat = new T.MeshStandardMaterial({
     map: parquet.map,
     roughnessMap: parquet.roughnessMap,
     bumpMap: parquet.bumpMap,
-    bumpScale: 0.012,
-    roughness: 0.62,
+    bumpScale: 0.014,
+    roughness: 0.58,
     metalness: 0.06,
-    envMapIntensity: 1.05,
+    envMapIntensity: 1.08,
   });
-  const floor = mesh(new T.PlaneGeometry(R * 2.15, R * 2.15), floorMat, {
+  root.add(mesh(new T.PlaneGeometry(R * 2.15, R * 2.15), floorMat, {
     pos: [0, FLOOR_Y, 0],
     rot: [-Math.PI / 2, 0, 0],
     receive: true,
-  });
-  root.add(floor);
+  }));
 
-  // 2. Woven circular Nordic rug anchoring the tree & gifts
-  const rugTex = rugTexture('cabin', {
-    base: '#eadbc1',
-    ring1: '#6e2128',
-    ring2: '#233f35',
-    accent: '#c5974e',
-  });
-  const rugMat = new T.MeshStandardMaterial({
-    map: rugTex,
-    roughness: 0.92,
-    metalness: 0.0,
-    envMapIntensity: 0.55,
-  });
-  root.add(mesh(new T.CylinderGeometry(1.78, 1.82, 0.022, 64), rugMat, {
+  // 2. Woven circular Nordic rug + brass trim
+  const rugTex = rugTexture('cabin', { base: '#eadbc1', ring1: '#6e2128', ring2: '#233f35', accent: '#c5974e' });
+  root.add(mesh(new T.CylinderGeometry(1.78, 1.82, 0.022, 64), new T.MeshStandardMaterial({ map: rugTex, roughness: 0.90 }), {
     pos: [0, FLOOR_Y + 0.009, 0],
     receive: true,
   }));
-  // Subtle braided brass-gold trim edging around rug
-  root.add(mesh(new T.TorusGeometry(1.79, 0.012, 8, 64), brass, {
-    pos: [0, FLOOR_Y + 0.015, 0],
-    rot: [Math.PI / 2, 0, 0],
-  }));
+  root.add(mesh(new T.TorusGeometry(1.79, 0.013, 8, 64), brass, { pos: [0, FLOOR_Y + 0.015, 0], rot: [Math.PI / 2, 0, 0] }));
   root.add(createContactShadow(1.38));
 
-  // 3. Architectural shell: 4 walls + beveled corner timber pilasters + wainscoting + crown moulding
+  // 3. Textured green Venetian plaster walls + wood-grained raised wainscoting & boiserie frames
   const wallMat = new T.MeshStandardMaterial({
     map: plaster.map,
     bumpMap: plaster.bumpMap,
     bumpScale: 0.018,
-    roughness: 0.88,
+    roughness: 0.85,
     metalness: 0.02,
-    envMapIntensity: 0.65,
+    envMapIntensity: 0.72,
   });
-
-  // Back wall (-Z) has a real recessed opening on the left for the panoramic snow window!
-  // Let's build the back wall around the window aperture (x in [-4.05, -1.25], y in [1.28, 4.32]).
   const wallZ = -R;
-  root.add(mesh(new T.BoxGeometry(R * 2, 1.08, 0.18), wallMat, { pos: [0, FLOOR_Y + 0.54, wallZ] })); // lower strip
-  root.add(mesh(new T.BoxGeometry(R * 2, 1.15, 0.18), wallMat, { pos: [0, 4.32 + 0.575, wallZ] })); // upper strip
-  root.add(mesh(new T.BoxGeometry(1.95, 3.04, 0.18), wallMat, { pos: [-5.025, 2.80, wallZ] })); // far left jamb
-  root.add(mesh(new T.BoxGeometry(7.25, 3.04, 0.18), wallMat, { pos: [2.375, 2.80, wallZ] })); // center-to-right expanse
+  // Back wall around snow window opening (x in [-4.20, -1.40], y in [1.26, 4.34])
+  root.add(mesh(new T.BoxGeometry(R * 2, 1.06, 0.18), wallMat, { pos: [0, FLOOR_Y + 0.53, wallZ] }));
+  root.add(mesh(new T.BoxGeometry(R * 2, 1.18, 0.18), wallMat, { pos: [0, 4.34 + 0.59, wallZ] }));
+  root.add(mesh(new T.BoxGeometry(1.80, 3.08, 0.18), wallMat, { pos: [-5.10, 2.80, wallZ] }));
+  root.add(mesh(new T.BoxGeometry(7.40, 3.08, 0.18), wallMat, { pos: [2.30, 2.80, wallZ] }));
 
-  // Other 3 solid walls (+Z, -X, +X)
   root.add(mesh(new T.BoxGeometry(R * 2, H, 0.18), wallMat, { pos: [0, FLOOR_Y + H / 2, R] }));
   root.add(mesh(new T.BoxGeometry(0.18, H, R * 2), wallMat, { pos: [-R, FLOOR_Y + H / 2, 0] }));
   root.add(mesh(new T.BoxGeometry(0.18, H, R * 2), wallMat, { pos: [R, FLOOR_Y + H / 2, 0] }));
 
-  // Wainscoting, dado rails, crown mouldings & corner timber columns around all 4 walls
+  // Architectural trim, raised wainscoting panels, dado rails, crown moulding & boiserie on all 4 walls!
   for (let side = 0; side < 4; side++) {
     const wg = new T.Group();
     wg.rotation.y = (side * Math.PI) / 2;
     const z = -R + 0.10;
-    // Lower walnut wainscoting panel band
-    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.94, 0.06), darkWalnut, { pos: [0, FLOOR_Y + 0.47, z] }));
-    // Dado rail cap + baseboard
-    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.075, 0.11), warmOak, { pos: [0, FLOOR_Y + 0.96, z + 0.02] }));
-    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.15, 0.09), darkWalnut, { pos: [0, FLOOR_Y + 0.075, z + 0.015] }));
-    // Recessed decorative vertical wainscoting battens
-    for (let x = -5.2; x <= 5.2; x += 1.3) {
-      wg.add(mesh(new T.BoxGeometry(0.06, 0.72, 0.03), warmOak, { pos: [x, FLOOR_Y + 0.51, z + 0.035] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.96, 0.06), darkWalnut, { pos: [0, FLOOR_Y + 0.48, z] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.075, 0.12), warmOak, { pos: [0, FLOOR_Y + 0.98, z + 0.025] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.16, 0.10), darkWalnut, { pos: [0, FLOOR_Y + 0.08, z + 0.02] }));
+    for (let x = -5.0; x <= 5.0; x += 1.25) {
+      addBoiserieFrame(wg, x, FLOOR_Y + 0.52, z + 0.04, 0.96, 0.62, warmOak);
     }
-    // Crown moulding
-    wg.add(mesh(new T.BoxGeometry(R * 2, 0.18, 0.16), darkWalnut, { pos: [0, FLOOR_Y + H - 0.09, z + 0.04] }));
-    wg.add(mesh(new T.BoxGeometry(R * 2, 0.04, 0.20), warmOak, { pos: [0, FLOOR_Y + H - 0.20, z + 0.05] }));
-    // Corner column
-    wg.add(mesh(new T.BoxGeometry(0.26, H, 0.26), darkWalnut, { pos: [-R + 0.13, FLOOR_Y + H / 2, -R + 0.13] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2, 0.20, 0.18), darkWalnut, { pos: [0, FLOOR_Y + H - 0.10, z + 0.04] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2, 0.045, 0.22), warmOak, { pos: [0, FLOOR_Y + H - 0.22, z + 0.05] }));
+    wg.add(mesh(new T.BoxGeometry(0.28, H, 0.28), darkWalnut, { pos: [-R + 0.14, FLOOR_Y + H / 2, -R + 0.14] }));
+    // Upper wall architectural boiserie frames on side & back walls
+    if (side !== 0) {
+      for (const bx of [-3.6, 3.6]) {
+        addBoiserieFrame(wg, bx, 3.15, z + 0.015, 2.25, 2.55, darkWalnut);
+      }
+    }
     root.add(wg);
   }
 
-  // 4. Vaulted dark-timber ceiling + exposed beams + central sculpted brass ring chandelier
-  root.add(mesh(new T.PlaneGeometry(R * 2.1, R * 2.1), darkWalnut, {
-    pos: [0, FLOOR_Y + H, 0],
-    rot: [Math.PI / 2, 0, 0],
-  }));
+  // 4. Wood-grained coffered timber ceiling + exposed rafters + sculpted brass chandelier
+  root.add(mesh(new T.PlaneGeometry(R * 2.1, R * 2.1), darkWalnut, { pos: [0, FLOOR_Y + H, 0], rot: [Math.PI / 2, 0, 0] }));
   for (let x = -4.2; x <= 4.2; x += 2.1) {
-    root.add(mesh(new T.BoxGeometry(0.18, 0.24, R * 2), darkWalnut, { pos: [x, FLOOR_Y + H - 0.12, 0] }));
+    root.add(mesh(new T.BoxGeometry(0.20, 0.26, R * 2), darkWalnut, { pos: [x, FLOOR_Y + H - 0.13, 0] }));
   }
-  // Sculpted brass wheel chandelier high overhead (y = 4.95)
   const chandelier = new T.Group();
-  chandelier.position.set(0, 4.95, 0);
-  chandelier.add(mesh(new T.CylinderGeometry(0.025, 0.025, 0.75, 10), brass, { pos: [0, 0.37, 0] }));
-  chandelier.add(mesh(new T.TorusGeometry(0.92, 0.024, 10, 48), brass, { rot: [Math.PI / 2, 0, 0] }));
+  chandelier.position.set(0, 5.0, 0);
+  chandelier.add(mesh(new T.CylinderGeometry(0.025, 0.025, 0.72, 10), brass, { pos: [0, 0.36, 0] }));
+  chandelier.add(mesh(new T.TorusGeometry(0.95, 0.026, 10, 48), brass, { rot: [Math.PI / 2, 0, 0] }));
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    const cx = Math.cos(a) * 0.92;
-    const cz = Math.sin(a) * 0.92;
-    chandelier.add(mesh(new T.CylinderGeometry(0.008, 0.008, 0.92, 6), brass, {
-      pos: [cx * 0.5, 0.18, cz * 0.5],
-      rot: [0, -a, Math.PI / 2 - 0.36],
-    }));
+    const cx = Math.cos(a) * 0.95, cz = Math.sin(a) * 0.95;
+    chandelier.add(mesh(new T.CylinderGeometry(0.009, 0.009, 0.95, 6), brass, { pos: [cx * 0.5, 0.18, cz * 0.5], rot: [0, -a, Math.PI / 2 - 0.36] }));
     chandelier.add(mesh(new T.CylinderGeometry(0.022, 0.024, 0.14, 10), waxMat, { pos: [cx, 0.08, cz] }));
     chandelier.add(mesh(new T.SphereGeometry(0.022, 8, 6), flameMat, { pos: [cx, 0.17, cz] }));
-    addGlow(chandelier, cx, 0.18, cz, 0xffd78c, 0.36, 0.45);
+    addGlow(chandelier, cx, 0.18, cz, 0xffd78c, 0.40, 0.48);
   }
   root.add(chandelier);
 
-  // 5. HERO BACK-LEFT: Panoramic Recessed Snow Window + Real 3D Winter Night Diorama Behind Glass
-  const winCenterX = -2.65;
-  const winW = 2.82;
-  const winH = 3.04;
-  const winY = 2.80;
+  // 5. HERO BACK-LEFT: Panoramic Snow Window with Painterly Alpine Village Vista & Lit Pine Garland
+  const winCenterX = -2.80;
+  const winW = 2.82, winH = 3.08, winY = 2.80;
   const winGroup = new T.Group();
   winGroup.position.set(winCenterX, winY, wallZ);
 
-  // Outer walnut casing & deep windowsill
-  winGroup.add(mesh(new T.BoxGeometry(winW + 0.24, 0.15, 0.34), darkWalnut, { pos: [0, -winH / 2 - 0.04, 0.08] }));
-  winGroup.add(mesh(new T.BoxGeometry(winW + 0.36, 0.07, 0.42), warmOak, { pos: [0, -winH / 2 - 0.10, 0.14] }));
-  winGroup.add(mesh(new T.BoxGeometry(winW + 0.24, 0.16, 0.28), darkWalnut, { pos: [0, winH / 2 + 0.04, 0.06] }));
+  // Carved walnut window surround & deep sill
+  winGroup.add(mesh(new T.BoxGeometry(winW + 0.28, 0.16, 0.38), darkWalnut, { pos: [0, -winH / 2 - 0.04, 0.09] }));
+  winGroup.add(mesh(new T.BoxGeometry(winW + 0.42, 0.075, 0.48), warmOak, { pos: [0, -winH / 2 - 0.10, 0.16] }));
+  winGroup.add(mesh(new T.BoxGeometry(winW + 0.36, 0.20, 0.34), darkWalnut, { pos: [0, winH / 2 + 0.06, 0.08] }));
   for (const sx of [-1, 1]) {
-    winGroup.add(mesh(new T.BoxGeometry(0.14, winH + 0.18, 0.28), darkWalnut, { pos: [sx * (winW / 2 + 0.05), 0, 0.06] }));
+    winGroup.add(mesh(new T.BoxGeometry(0.16, winH + 0.22, 0.30), darkWalnut, { pos: [sx * (winW / 2 + 0.06), 0, 0.06] }));
   }
-  // Delicate mullions (3x3 Georgian grid)
-  for (const mx of [-winW / 6, winW / 6]) {
-    winGroup.add(mesh(new T.BoxGeometry(0.045, winH, 0.08), darkWalnut, { pos: [mx, 0, 0.02] }));
-  }
-  for (const my of [-winH / 6, winH / 6]) {
-    winGroup.add(mesh(new T.BoxGeometry(winW, 0.045, 0.08), darkWalnut, { pos: [0, my, 0.02] }));
-  }
-  // Subtle frost drifts along each horizontal mullion
-  const snowMat = new T.MeshStandardMaterial({ color: 0xe6effa, roughness: 0.72, metalness: 0.05, emissive: 0x3b597d, emissiveIntensity: 0.18 });
+  for (const mx of [-winW / 6, winW / 6]) winGroup.add(mesh(new T.BoxGeometry(0.045, winH, 0.08), darkWalnut, { pos: [mx, 0, 0.02] }));
+  for (const my of [-winH / 6, winH / 6]) winGroup.add(mesh(new T.BoxGeometry(winW, 0.045, 0.08), darkWalnut, { pos: [0, my, 0.02] }));
+
+  // Subtle frost drifts on outer mullions
+  const snowMat = new T.MeshStandardMaterial({ color: 0xe6effa, roughness: 0.70, emissive: 0x3a5a80, emissiveIntensity: 0.22 });
   for (const my of [-winH / 2 + 0.04, -winH / 6 + 0.03, winH / 6 + 0.03]) {
-    winGroup.add(mesh(new T.BoxGeometry(winW - 0.08, 0.05, 0.06), snowMat, { pos: [0, my, -0.02] }));
+    winGroup.add(mesh(new T.BoxGeometry(winW - 0.08, 0.045, 0.05), snowMat, { pos: [0, my, -0.02] }));
   }
 
-  // Deep 3D winter night diorama alcove behind the glass (z from -0.1 to -2.2)
-  const nightSkyMat = new T.ShaderMaterial({
-    side: T.FrontSide,
-    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `
-      varying vec2 vUv;
-      void main() {
-        vec3 top = vec3(0.04, 0.09, 0.20);
-        vec3 mid = vec3(0.09, 0.19, 0.34);
-        vec3 bot = vec3(0.20, 0.32, 0.48);
-        vec3 c = mix(bot, mid, smoothstep(0.0, 0.45, vUv.y));
-        c = mix(c, top, smoothstep(0.45, 1.0, vUv.y));
-        gl_FragColor = vec4(c, 1.0);
-      }
-    `,
-  });
-  winGroup.add(mesh(new T.PlaneGeometry(5.6, 5.2), nightSkyMat, { pos: [0, 0.2, -2.3], receive: false }));
-  // Luminous winter moon outside
-  winGroup.add(mesh(new T.CircleGeometry(0.24, 24), new T.MeshBasicMaterial({ color: 0xf7f2de }), { pos: [-0.72, 0.92, -2.22] }));
-  addGlow(winGroup, -0.72, 0.92, -2.18, 0x9ec8ff, 1.8, 0.42);
-  // Snow hills + silhouetted pines + glowing distant alpine cottages (strictly behind z < -0.5 so zero indoor poke-through!)
-  winGroup.add(mesh(new T.SphereGeometry(2.1, 24, 16), snowMat, { pos: [0, -2.55, -2.25], scale: [1.8, 0.62, 0.32] }));
-  const pineSilMat = new T.MeshStandardMaterial({ color: 0x102533, roughness: 0.9, emissive: 0x0a1c29, emissiveIntensity: 0.45 });
-  const pineSpecs = [[-1.35, -0.65, -1.35, 1.1], [-0.95, -0.78, -1.55, 0.9], [0.95, -0.62, -1.45, 1.25], [1.4, -0.72, -1.25, 0.95], [0.25, -0.82, -1.7, 0.8]];
-  for (const [px, py, pz, sc] of pineSpecs) {
-    winGroup.add(mesh(new T.ConeGeometry(0.32 * sc, 0.95 * sc, 7), pineSilMat, { pos: [px, py, pz] }));
-    winGroup.add(mesh(new T.ConeGeometry(0.24 * sc, 0.65 * sc, 7), pineSilMat, { pos: [px, py + 0.35 * sc, pz] }));
-    winGroup.add(mesh(new T.ConeGeometry(0.16 * sc, 0.35 * sc, 7), snowMat, { pos: [px, py + 0.56 * sc, pz] }));
-  }
-  // Tiny distant warm cottage lights
-  const houseGlow = new T.MeshBasicMaterial({ color: 0xffca6b });
-  winGroup.add(mesh(new T.BoxGeometry(0.28, 0.22, 0.2), pineSilMat, { pos: [-0.22, -0.92, -1.55] }));
-  winGroup.add(mesh(new T.ConeGeometry(0.24, 0.18, 4), snowMat, { pos: [-0.22, -0.73, -1.55], rot: [0, Math.PI / 4, 0] }));
-  winGroup.add(mesh(new T.PlaneGeometry(0.06, 0.07), houseGlow, { pos: [-0.26, -0.90, -1.44] }));
-  winGroup.add(mesh(new T.PlaneGeometry(0.06, 0.07), houseGlow, { pos: [-0.17, -0.90, -1.44] }));
-  addGlow(winGroup, -0.22, -0.90, -1.42, 0xffbe5c, 0.42, 0.55);
-
-  // Subtle reflective frosted window glass
+  // High-res painterly nocturnal Alpine Christmas village panorama behind the window!
+  const vistaMat = new T.MeshBasicMaterial({ map: alpineVistaTexture('window') });
+  winGroup.add(mesh(new T.PlaneGeometry(5.8, 3.8), vistaMat, { pos: [0, 0.05, -1.65], receive: false }));
+  // Soft reflective frost-tinted window pane
   const glassMat = new T.MeshPhysicalMaterial({
-    color: 0x9cc0e6,
-    transparent: true,
-    opacity: 0.14,
-    roughness: 0.12,
-    metalness: 0.1,
-    envMapIntensity: 1.4,
-    depthWrite: false,
+    color: 0xa2c6eb, transparent: true, opacity: 0.12, roughness: 0.10, metalness: 0.08, envMapIntensity: 1.5, depthWrite: false,
   });
   winGroup.add(mesh(new T.PlaneGeometry(winW - 0.06, winH - 0.06), glassMat, { pos: [0, 0, 0.01], receive: false }));
 
-  // Sculpted burgundy velvet curtains flanking the window + brass curtain rod
-  winGroup.add(mesh(new T.CylinderGeometry(0.022, 0.022, winW + 0.95, 12), brass, {
-    pos: [0, winH / 2 + 0.22, 0.22],
-    rot: [0, 0, Math.PI / 2],
-  }));
+  // Lush velvet curtains + brass rod + lit evergreen window cornice swag + windowsill candle
+  winGroup.add(mesh(new T.CylinderGeometry(0.024, 0.024, winW + 1.05, 12), brass, { pos: [0, winH / 2 + 0.26, 0.24], rot: [0, 0, Math.PI / 2] }));
   for (const sx of [-1, 1]) {
-    winGroup.add(mesh(new T.SphereGeometry(0.055, 12, 10), brass, { pos: [sx * (winW / 2 + 0.50), winH / 2 + 0.22, 0.22] }));
-    for (let p = 0; p < 3; p++) {
-      winGroup.add(mesh(new T.CylinderGeometry(0.11, 0.14, winH + 0.95, 12), velvet, {
-        pos: [sx * (winW / 2 + 0.14 + p * 0.12), -0.18, 0.20 + (p % 2) * 0.03],
-        scale: [0.85, 1, 0.55],
+    winGroup.add(mesh(new T.SphereGeometry(0.058, 12, 10), brass, { pos: [sx * (winW / 2 + 0.56), winH / 2 + 0.26, 0.24] }));
+    for (let p = 0; p < 4; p++) {
+      winGroup.add(mesh(new T.CylinderGeometry(0.10, 0.135, winH + 1.05, 12), velvet, {
+        pos: [sx * (winW / 2 + 0.10 + p * 0.11), -0.18, 0.20 + (p % 2) * 0.03],
+        scale: [0.82, 1, 0.55],
       }));
     }
-    // Brass tieback ring
-    winGroup.add(mesh(new T.TorusGeometry(0.16, 0.018, 8, 20), brass, {
-      pos: [sx * (winW / 2 + 0.26), -0.58, 0.21],
-      rot: [Math.PI / 2, sx * 0.2, 0],
-    }));
+    winGroup.add(mesh(new T.TorusGeometry(0.18, 0.018, 8, 20), brass, { pos: [sx * (winW / 2 + 0.26), -0.58, 0.21], rot: [Math.PI / 2, sx * 0.2, 0] }));
   }
+  const winGarland = createPineGarland(winW + 0.55, 0.22, evergreen, berry, true);
+  winGarland.position.set(0, winH / 2 + 0.22, 0.30);
+  winGroup.add(winGarland);
+
+  const sillCandle = createCandle(0.24, 0.032, brass, waxMat, flameMat);
+  sillCandle.group.position.set(0.82, -winH / 2 - 0.05, 0.26);
+  winGroup.add(sillCandle.group);
   root.add(winGroup);
 
-  // Falling snow strictly outside the window!
+  // Soft snowfall strictly outside the window pane
   const windowSnow = createParticleField({
-    count: 110,
-    bounds: [winCenterX - 1.5, winCenterX + 1.5, 1.3, 4.4, wallZ - 1.7, wallZ - 0.25],
-    color: 0xdcecff,
-    size: 13,
-    speedY: -0.42,
-    sway: 0.14,
-    opacity: 0.85,
-    seed: 2026,
+    count: 130, bounds: [winCenterX - 1.5, winCenterX + 1.5, 1.3, 4.4, wallZ - 1.45, wallZ - 0.18],
+    color: 0xe2f0ff, size: 13, speedY: -0.44, sway: 0.14, opacity: 0.88, seed: 2026,
   });
   root.add(windowSnow.object);
   animators.push(t => windowSnow.update(t));
 
-  // 6. HERO BACK-RIGHT: Sculpted Stone & Timber Fireplace Hearth
+  // 6. HERO BACK-RIGHT: Sculpted Arched Stone Fireplace Hearth + Firewood Alcove + Lit Garland
   const fpGroup = new T.Group();
-  fpGroup.position.set(2.55, FLOOR_Y, wallZ + 0.36);
+  fpGroup.position.set(2.85, FLOOR_Y, wallZ + 0.42);
+  const stoneMat = new T.MeshStandardMaterial({ map: stone.map, bumpMap: stone.bumpMap, bumpScale: 0.028, roughness: 0.86, metalness: 0.03 });
+  const ironMat = new T.MeshStandardMaterial({ color: 0x1e1d1f, roughness: 0.48, metalness: 0.82 });
 
-  const stoneMat = new T.MeshStandardMaterial({
-    map: stone.map,
-    bumpMap: stone.bumpMap,
-    bumpScale: 0.025,
-    roughness: 0.88,
-    metalness: 0.03,
-  });
-  // Hearth slab & stone chimney breast
-  fpGroup.add(mesh(new T.BoxGeometry(2.45, 0.16, 1.05), stoneMat, { pos: [0, 0.08, 0.22] }));
-  fpGroup.add(mesh(new T.BoxGeometry(2.18, 1.72, 0.72), stoneMat, { pos: [0, 0.94, 0] }));
-  // Tapered upper chimney breast rising to ceiling
-  fpGroup.add(mesh(new T.BoxGeometry(1.76, 3.62, 0.56), stoneMat, { pos: [0, 3.60, -0.06] }));
-  // Carved walnut mantel beam & corbels
-  fpGroup.add(mesh(new T.BoxGeometry(2.48, 0.16, 0.92), darkWalnut, { pos: [0, 1.84, 0.10] }));
-  fpGroup.add(mesh(new T.BoxGeometry(2.56, 0.055, 0.98), warmOak, { pos: [0, 1.93, 0.11] }));
-  for (const sx of [-0.95, 0.95]) {
-    fpGroup.add(mesh(new T.BoxGeometry(0.18, 0.28, 0.24), darkWalnut, { pos: [sx, 1.64, 0.36] }));
+  // Stepped stone hearth slab + lower chimney breast + tapered upper stack
+  fpGroup.add(mesh(new T.BoxGeometry(2.68, 0.18, 1.15), stoneMat, { pos: [0, 0.09, 0.24] }));
+  fpGroup.add(mesh(new T.BoxGeometry(2.38, 1.80, 0.78), stoneMat, { pos: [0, 0.99, 0] }));
+  fpGroup.add(mesh(new T.BoxGeometry(1.88, 3.65, 0.60), stoneMat, { pos: [0, 3.68, -0.06] }));
+
+  // Sculpted stone keystone & voussoir arch framing the firebox
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 8) * Math.PI;
+    fpGroup.add(mesh(new T.BoxGeometry(0.18, 0.24, 0.16), stoneMat, {
+      pos: [Math.cos(a) * 0.66, 0.88 + Math.sin(a) * 0.46, 0.39],
+      rot: [0, 0, a - Math.PI / 2],
+    }));
   }
 
-  // Dark recessed firebox opening + glowing embers + charred logs + animated 3D flames
-  const fireboxMat = new T.MeshStandardMaterial({ color: 0x160d0a, roughness: 0.95 });
-  fpGroup.add(mesh(new T.BoxGeometry(1.18, 1.08, 0.26), fireboxMat, { pos: [0, 0.70, 0.28] }));
-  const emberMat = new T.MeshBasicMaterial({ color: 0xff5a1f });
-  const emberBed = mesh(new T.BoxGeometry(0.92, 0.10, 0.28), emberMat, { pos: [0, 0.22, 0.34], receive: false });
-  fpGroup.add(emberBed);
+  // Carved walnut mantelpiece with fluted pilasters & dentil shelf
+  fpGroup.add(mesh(new T.BoxGeometry(2.64, 0.18, 0.96), darkWalnut, { pos: [0, 1.94, 0.12] }));
+  fpGroup.add(mesh(new T.BoxGeometry(2.74, 0.065, 1.04), warmOak, { pos: [0, 2.05, 0.14] }));
+  for (const sx of [-1.05, 1.05]) {
+    fpGroup.add(mesh(new T.BoxGeometry(0.22, 1.72, 0.22), darkWalnut, { pos: [sx, 1.02, 0.36] }));
+    fpGroup.add(mesh(new T.BoxGeometry(0.28, 0.26, 0.28), warmOak, { pos: [sx, 1.74, 0.38] }));
+  }
 
-  // Stacked hearth logs
-  const logGeo = new T.CylinderGeometry(0.065, 0.072, 0.72, 10);
-  const logMat = new T.MeshStandardMaterial({ color: 0x2b1810, roughness: 0.92, emissive: 0x6e1f08, emissiveIntensity: 0.45 });
-  fpGroup.add(mesh(logGeo, logMat, { pos: [-0.08, 0.30, 0.36], rot: [0.15, 0.25, Math.PI / 2 - 0.12] }));
-  fpGroup.add(mesh(logGeo, logMat, { pos: [0.10, 0.32, 0.34], rot: [-0.12, -0.30, Math.PI / 2 + 0.15] }));
-  fpGroup.add(mesh(logGeo, logMat, { pos: [0.0, 0.39, 0.35], rot: [0.05, 0.08, Math.PI / 2] }));
+  // Deep recessed arched firebox + warm glowing hearth back + birch logs + layered animated flames
+  const fireboxMat = new T.MeshStandardMaterial({ color: 0x1a0e0a, roughness: 0.95 });
+  fpGroup.add(mesh(new T.BoxGeometry(1.18, 1.06, 0.28), fireboxMat, { pos: [0, 0.72, 0.28] }));
+  addLightWash(fpGroup, 0, 0.66, 0.43, 1.45, 1.15, 0xff7b28, 0.52);
+  fpGroup.add(mesh(new T.BoxGeometry(0.96, 0.12, 0.28), new T.MeshBasicMaterial({ color: 0xff5e1f }), { pos: [0, 0.24, 0.34], receive: false }));
 
-  // Layered animated stylized 3D fire tongues
+  const logGeo = new T.CylinderGeometry(0.065, 0.072, 0.74, 10);
+  const logMat = new T.MeshStandardMaterial({ color: 0x2d1910, roughness: 0.92, emissive: 0x7a2208, emissiveIntensity: 0.55 });
+  fpGroup.add(mesh(logGeo, logMat, { pos: [-0.08, 0.31, 0.36], rot: [0.15, 0.25, Math.PI / 2 - 0.12] }));
+  fpGroup.add(mesh(logGeo, logMat, { pos: [0.10, 0.33, 0.34], rot: [-0.12, -0.30, Math.PI / 2 + 0.15] }));
+  fpGroup.add(mesh(logGeo, logMat, { pos: [0.0, 0.40, 0.35], rot: [0.05, 0.08, Math.PI / 2] }));
+
   const flames = [];
-  const flameConfigs = [
-    { x: 0.0, y: 0.56, z: 0.37, r: 0.16, h: 0.46, color: 0xff6a1a, phase: 0 },
-    { x: -0.17, y: 0.50, z: 0.38, r: 0.11, h: 0.34, color: 0xff9229, phase: 1.7 },
-    { x: 0.18, y: 0.49, z: 0.36, r: 0.12, h: 0.36, color: 0xff7e21, phase: 3.1 },
-    { x: 0.02, y: 0.48, z: 0.40, r: 0.09, h: 0.28, color: 0xffe082, phase: 4.5 },
-  ];
-  for (const fc of flameConfigs) {
-    const fMat = new T.MeshBasicMaterial({ color: fc.color, transparent: true, opacity: 0.92 });
-    const fm = mesh(new T.ConeGeometry(fc.r, fc.h, 8), fMat, { pos: [fc.x, fc.y, fc.z], receive: false });
+  for (const fc of [
+    { x: 0.0, y: 0.58, z: 0.37, r: 0.17, h: 0.48, color: 0xff6a1a, phase: 0 },
+    { x: -0.18, y: 0.52, z: 0.38, r: 0.12, h: 0.36, color: 0xff9229, phase: 1.7 },
+    { x: 0.18, y: 0.51, z: 0.36, r: 0.12, h: 0.38, color: 0xff7e21, phase: 3.1 },
+    { x: 0.02, y: 0.49, z: 0.40, r: 0.095, h: 0.30, color: 0xffe48a, phase: 4.5 },
+  ]) {
+    const fm = mesh(new T.ConeGeometry(fc.r, fc.h, 8), new T.MeshBasicMaterial({ color: fc.color, transparent: true, opacity: 0.92 }), {
+      pos: [fc.x, fc.y, fc.z], receive: false,
+    });
     fpGroup.add(fm);
     flames.push({ mesh: fm, baseY: fc.y, phase: fc.phase });
   }
-  const fireGlow = addGlow(fpGroup, 0, 0.58, 0.48, 0xff8c38, 1.55, 0.52);
+  const fireGlow = addGlow(fpGroup, 0, 0.62, 0.50, 0xff8c38, 1.75, 0.58);
+  // Warm firelight glow pool spilling onto the parquet floor right in front of the hearth!
+  addLightWash(fpGroup, 0, 0.015, 1.35, 3.2, 2.4, 0xff8d3a, 0.32, [-Math.PI / 2, 0, 0]);
 
-  // Wrought iron fender grate
-  const ironMat = new T.MeshStandardMaterial({ color: 0x1d1c1d, roughness: 0.55, metalness: 0.78 });
-  fpGroup.add(mesh(new T.BoxGeometry(1.16, 0.03, 0.03), ironMat, { pos: [0, 0.36, 0.50] }));
+  // Wrought iron fender grate + side birch firewood rack
+  fpGroup.add(mesh(new T.BoxGeometry(1.18, 0.032, 0.032), ironMat, { pos: [0, 0.38, 0.50] }));
   for (let gx = -0.52; gx <= 0.52; gx += 0.13) {
-    fpGroup.add(mesh(new T.CylinderGeometry(0.012, 0.012, 0.26, 6), ironMat, { pos: [gx, 0.24, 0.50] }));
+    fpGroup.add(mesh(new T.CylinderGeometry(0.012, 0.012, 0.28, 6), ironMat, { pos: [gx, 0.25, 0.50] }));
   }
-
-  // Mantelpiece styling: evergreen garland + brass pillar candles + framed winter art + hanging stockings
-  for (let i = -8; i <= 8; i++) {
-    const x = i * 0.13;
-    fpGroup.add(mesh(new T.SphereGeometry(0.095, 8, 6), evergreen, {
-      pos: [x, 1.98 + Math.sin(i * 0.7) * 0.02, 0.48],
-      scale: [1.3, 0.75, 0.9],
-    }));
-    if (i % 3 === 0) {
-      fpGroup.add(mesh(new T.SphereGeometry(0.028, 8, 6), berry, { pos: [x + 0.03, 2.02, 0.55] }));
+  // Stacked birch logs beside fireplace right
+  const birchMat = new T.MeshStandardMaterial({ color: 0xd9cdb8, roughness: 0.85 });
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3 - r; c++) {
+      fpGroup.add(mesh(new T.CylinderGeometry(0.06, 0.06, 0.42, 9), birchMat, {
+        pos: [1.56 + (c - (2 - r) * 0.5) * 0.13, 0.08 + r * 0.11, 0.28],
+        rot: [Math.PI / 2, 0, 0],
+      }));
     }
   }
+
+  // Lit lush pine garland along mantel + brass pillar candles + richly framed winter oil painting + stockings
+  const mantelGarland = createPineGarland(2.45, 0.14, evergreen, berry, true);
+  mantelGarland.position.set(0, 2.10, 0.56);
+  fpGroup.add(mantelGarland);
+
   const mantelCandles = [
-    createCandle(0.32, 0.038, brass, waxMat, flameMat),
-    createCandle(0.22, 0.034, brass, waxMat, flameMat),
-    createCandle(0.28, 0.036, brass, waxMat, flameMat),
+    createCandle(0.34, 0.038, brass, waxMat, flameMat),
+    createCandle(0.24, 0.034, brass, waxMat, flameMat),
+    createCandle(0.30, 0.036, brass, waxMat, flameMat),
   ];
-  mantelCandles[0].group.position.set(-0.78, 1.96, 0.24);
-  mantelCandles[1].group.position.set(-0.62, 1.96, 0.34);
-  mantelCandles[2].group.position.set(0.76, 1.96, 0.28);
+  mantelCandles[0].group.position.set(-0.84, 2.08, 0.28);
+  mantelCandles[1].group.position.set(-0.66, 2.08, 0.38);
+  mantelCandles[2].group.position.set(0.82, 2.08, 0.30);
   mantelCandles.forEach(c => fpGroup.add(c.group));
 
-  // Framed miniature winter art on chimney breast
-  fpGroup.add(mesh(new T.BoxGeometry(1.18, 0.92, 0.06), brass, { pos: [0, 2.86, 0.24] }));
-  fpGroup.add(mesh(new T.PlaneGeometry(1.04, 0.78), new T.MeshStandardMaterial({ map: framedArtTexture(), roughness: 0.65 }), {
-    pos: [0, 2.86, 0.275],
+  // Framed vintage alpine landscape painting with antique gold double frame + picture light!
+  fpGroup.add(mesh(new T.BoxGeometry(1.34, 0.98, 0.065), brass, { pos: [0, 3.02, 0.26] }));
+  fpGroup.add(mesh(new T.BoxGeometry(1.22, 0.86, 0.075), darkWalnut, { pos: [0, 3.02, 0.265] }));
+  fpGroup.add(mesh(new T.PlaneGeometry(1.12, 0.76), new T.MeshStandardMaterial({ map: alpineVistaTexture('window'), roughness: 0.55 }), {
+    pos: [0, 3.02, 0.305],
   }));
+  // Brass picture light bar above painting
+  fpGroup.add(mesh(new T.CylinderGeometry(0.018, 0.018, 0.44, 10), brass, { pos: [0, 3.62, 0.40], rot: [0, 0, Math.PI / 2] }));
+  addGlow(fpGroup, 0, 3.55, 0.40, 0xffd58a, 0.65, 0.45);
 
-  // Hanging velvet Christmas stockings
-  for (const [sx, scale] of [[-0.86, 1.0], [-0.56, 0.86]]) {
+  for (const [sx, scale] of [[-0.86, 1.0], [-0.54, 0.88]]) {
     const st = new T.Group();
-    st.position.set(sx, 1.62, 0.52);
+    st.position.set(sx, 1.72, 0.58);
     st.scale.setScalar(scale);
     st.add(mesh(new T.CylinderGeometry(0.095, 0.088, 0.11, 12), creamFabric, { pos: [0, 0.14, 0] }));
     st.add(mesh(new T.CylinderGeometry(0.08, 0.075, 0.34, 12), velvet, { pos: [0, -0.07, 0] }));
@@ -664,17 +560,15 @@ function buildCabinWorld() {
     fpGroup.add(st);
   }
 
-  // Real flickering hearth point light
-  const hearthLight = new T.PointLight(0xff8232, 3.8, 8.5, 1.6);
-  hearthLight.position.set(2.55, 0.95, wallZ + 1.05);
-  root.add(hearthLight);
-  root.add(fpGroup);
+  const hearthLight = new T.PointLight(0xff8434, 4.2, 9.2, 1.55);
+  hearthLight.position.set(2.85, 1.05, wallZ + 1.15);
+  root.add(hearthLight, fpGroup);
 
   animators.push(t => {
     const flicker = 0.88 + 0.09 * Math.sin(t * 7.3) + 0.05 * Math.sin(t * 13.7 + 1.2) + 0.03 * Math.cos(t * 19.1);
-    hearthLight.intensity = 3.7 * flicker;
-    fireGlow.material.opacity = 0.45 * flicker;
-    fireGlow.scale.setScalar(1.48 + 0.12 * flicker);
+    hearthLight.intensity = 4.1 * flicker;
+    fireGlow.material.opacity = 0.52 * flicker;
+    fireGlow.scale.setScalar(1.65 + 0.14 * flicker);
     for (const f of flames) {
       const s = 0.86 + 0.20 * Math.sin(t * 9.5 + f.phase) + 0.08 * Math.cos(t * 16.0 + f.phase);
       f.mesh.scale.set(0.92 + 0.08 * Math.cos(t * 8 + f.phase), s, 0.92);
@@ -684,121 +578,124 @@ function buildCabinWorld() {
       const c = mantelCandles[i];
       const cf = 0.92 + 0.08 * Math.sin(t * 8.2 + i * 2.1);
       c.flame.scale.set(1, cf, 1);
-      c.halo.material.opacity = 0.62 * cf;
+      c.halo.material.opacity = 0.65 * cf;
     }
   });
 
-  // 7. LEFT WALL (-X): Tufted velvet reading bench + warm arched brass floor lamp
+  // 7. LEFT WALL (-X): Sculpted Wingback Velvet Armchair + Side Table + Arched Brass Floor Lamp + Sconces
   const leftGroup = new T.Group();
-  leftGroup.position.set(-R + 0.65, FLOOR_Y, 0.2);
+  leftGroup.position.set(-R + 0.82, FLOOR_Y, 0.1);
   leftGroup.rotation.y = Math.PI / 2;
-  // Bench base & cushion
-  leftGroup.add(mesh(new T.BoxGeometry(2.55, 0.12, 0.82), warmOak, { pos: [0, 0.48, 0] }));
-  for (const lx of [-1.05, 1.05]) {
-    leftGroup.add(mesh(new T.BoxGeometry(0.14, 0.48, 0.72), darkWalnut, { pos: [lx, 0.24, 0] }));
+
+  // Sculpted velvet armchair angled cozily toward the tree
+  const chair = new T.Group();
+  chair.position.set(-0.35, 0, 0.18);
+  chair.rotation.y = 0.25;
+  for (const [lx, lz] of [[-0.38, -0.35], [0.38, -0.35], [-0.38, 0.35], [0.38, 0.35]]) {
+    chair.add(mesh(new T.CylinderGeometry(0.032, 0.022, 0.34, 10), darkWalnut, { pos: [lx, 0.17, lz] }));
   }
-  leftGroup.add(mesh(new T.BoxGeometry(2.42, 0.16, 0.74), velvet, { pos: [0, 0.61, 0] }));
-  // Throw pillows
-  leftGroup.add(mesh(new T.BoxGeometry(0.42, 0.40, 0.18), creamFabric, { pos: [-0.88, 0.84, -0.16], rot: [-0.22, 0.28, 0.08] }));
-  leftGroup.add(mesh(new T.BoxGeometry(0.36, 0.34, 0.16), evergreen, { pos: [0.92, 0.81, -0.18], rot: [-0.2, -0.24, -0.05] }));
-  // Brass floor lamp beside bench
+  chair.add(mesh(new T.BoxGeometry(0.92, 0.22, 0.84), velvet, { pos: [0, 0.42, 0] }));
+  chair.add(mesh(new T.BoxGeometry(0.86, 0.88, 0.20), velvet, { pos: [0, 0.92, -0.34], rot: [-0.14, 0, 0] }));
+  for (const sx of [-0.42, 0.42]) {
+    chair.add(mesh(new T.BoxGeometry(0.16, 0.32, 0.78), velvet, { pos: [sx, 0.64, -0.02] }));
+    chair.add(mesh(new T.BoxGeometry(0.14, 0.48, 0.26), velvet, { pos: [sx, 1.02, -0.22], rot: [-0.12, 0, 0] })); // wingback cheeks!
+  }
+  chair.add(mesh(new T.BoxGeometry(0.38, 0.34, 0.14), creamFabric, { pos: [0.06, 0.68, -0.14], rot: [-0.24, -0.18, 0.08] }));
+  leftGroup.add(chair);
+
+  // Round walnut side table with glowing lantern & mug
+  const sideTable = new T.Group();
+  sideTable.position.set(0.82, 0, 0.12);
+  sideTable.add(mesh(new T.CylinderGeometry(0.38, 0.38, 0.045, 24), warmOak, { pos: [0, 0.64, 0] }));
+  sideTable.add(mesh(new T.CylinderGeometry(0.045, 0.065, 0.62, 12), darkWalnut, { pos: [0, 0.32, 0] }));
+  sideTable.add(mesh(new T.CylinderGeometry(0.24, 0.28, 0.04, 18), darkWalnut, { pos: [0, 0.02, 0] }));
+  const tableCandle = createCandle(0.18, 0.030, brass, waxMat, flameMat);
+  tableCandle.group.position.set(-0.08, 0.66, 0.04);
+  sideTable.add(tableCandle.group);
+  leftGroup.add(sideTable);
+
+  // Arched brass floor reading lamp with warm glowing linen shade
   const lampGroup = new T.Group();
-  lampGroup.position.set(-1.68, 0, -0.08);
-  lampGroup.add(mesh(new T.CylinderGeometry(0.22, 0.25, 0.04, 24), brass, { pos: [0, 0.02, 0] }));
-  lampGroup.add(mesh(new T.CylinderGeometry(0.022, 0.026, 2.05, 12), brass, { pos: [0, 1.04, 0] }));
-  const shadeMat = new T.MeshStandardMaterial({
-    color: 0xf7e7c8,
-    emissive: 0xffbf6b,
-    emissiveIntensity: 0.95,
-    roughness: 0.72,
-    side: T.DoubleSide,
-  });
-  lampGroup.add(mesh(new T.CylinderGeometry(0.20, 0.34, 0.36, 24, 1, true), shadeMat, { pos: [0, 2.02, 0] }));
-  addGlow(lampGroup, 0, 1.98, 0, 0xffcd7a, 1.05, 0.48);
+  lampGroup.position.set(-1.35, 0, -0.08);
+  lampGroup.add(mesh(new T.CylinderGeometry(0.22, 0.26, 0.045, 24), brass, { pos: [0, 0.022, 0] }));
+  lampGroup.add(mesh(new T.CylinderGeometry(0.022, 0.026, 2.08, 12), brass, { pos: [0, 1.06, 0] }));
+  const shadeMat = new T.MeshStandardMaterial({ color: 0xf9ebd0, emissive: 0xffc370, emissiveIntensity: 1.05, roughness: 0.70, side: T.DoubleSide });
+  lampGroup.add(mesh(new T.CylinderGeometry(0.21, 0.36, 0.38, 24, 1, true), shadeMat, { pos: [0, 2.05, 0] }));
+  addGlow(lampGroup, 0, 2.0, 0, 0xffcd7a, 1.25, 0.55);
   leftGroup.add(lampGroup);
-  // Wall sconces flanking the left wall
-  const sL1 = createWallSconce(brass, sconceGlass);
-  sL1.position.set(-2.6, 2.65, -0.52);
-  const sL2 = createWallSconce(brass, sconceGlass);
-  sL2.position.set(2.6, 2.65, -0.52);
+
+  // Framed holiday artwork centered on left wall + flanking sconces with warm wall washes
+  leftGroup.add(mesh(new T.BoxGeometry(1.42, 1.04, 0.055), brass, { pos: [0, 2.95, -0.64] }));
+  leftGroup.add(mesh(new T.PlaneGeometry(1.26, 0.88), new T.MeshStandardMaterial({ map: alpineVistaTexture('bakery'), roughness: 0.6 }), {
+    pos: [0, 2.95, -0.605],
+  }));
+  const sL1 = createWallSconce(brass, sconceGlass); sL1.position.set(-2.35, 2.75, -0.66);
+  const sL2 = createWallSconce(brass, sconceGlass); sL2.position.set(2.35, 2.75, -0.66);
   leftGroup.add(sL1, sL2);
   root.add(leftGroup);
 
-  // 8. RIGHT WALL (+X): Built-in arched walnut bookcase alcove with curated books & ceramics
+  // 8. RIGHT WALL (+X): Wood-Grained Library Bookcase Alcove with Warm Shelf Lighting
   const rightGroup = new T.Group();
-  rightGroup.position.set(R - 0.42, FLOOR_Y, 0);
+  rightGroup.position.set(R - 0.44, FLOOR_Y, 0);
   rightGroup.rotation.y = -Math.PI / 2;
-  rightGroup.add(mesh(new T.BoxGeometry(3.2, 3.65, 0.14), darkWalnut, { pos: [0, 1.825, -0.26] }));
-  for (const sx of [-1.55, 0, 1.55]) {
-    rightGroup.add(mesh(new T.BoxGeometry(0.12, 3.65, 0.56), darkWalnut, { pos: [sx, 1.825, 0] }));
-  }
-  rightGroup.add(mesh(new T.BoxGeometry(3.36, 0.14, 0.64), warmOak, { pos: [0, 3.66, 0.02] }));
-  // Lower cabinet doors + brass knobs
-  rightGroup.add(mesh(new T.BoxGeometry(3.04, 0.95, 0.48), warmOak, { pos: [0, 0.475, 0.02] }));
-  for (const kx of [-0.22, 0.22]) {
-    rightGroup.add(mesh(new T.SphereGeometry(0.04, 10, 8), brass, { pos: [kx, 0.62, 0.29] }));
-  }
-  // 3 shelves + stylized curated books & stoneware ceramics
+  rightGroup.add(mesh(new T.BoxGeometry(3.4, 3.80, 0.14), darkWalnut, { pos: [0, 1.90, -0.26] }));
+  for (const sx of [-1.64, 0, 1.64]) rightGroup.add(mesh(new T.BoxGeometry(0.14, 3.80, 0.58), darkWalnut, { pos: [sx, 1.90, 0] }));
+  rightGroup.add(mesh(new T.BoxGeometry(3.62, 0.18, 0.68), warmOak, { pos: [0, 3.82, 0.03] }));
+  rightGroup.add(mesh(new T.BoxGeometry(3.20, 0.96, 0.50), warmOak, { pos: [0, 0.48, 0.02] }));
+  for (const kx of [-0.22, 0.22]) rightGroup.add(mesh(new T.SphereGeometry(0.042, 10, 8), brass, { pos: [kx, 0.64, 0.30] }));
+
   const bookColors = [0x7a2127, 0x20473a, 0xb8863d, 0x2c4260, 0x5c2e28, 0xd4c3a3];
-  const shelfYs = [1.02, 1.84, 2.68];
   const rand = seeded(8842);
-  for (const sy of shelfYs) {
-    rightGroup.add(mesh(new T.BoxGeometry(3.16, 0.08, 0.52), warmOak, { pos: [0, sy, 0.02] }));
-    // Left bay: neatly stacked colorful hardcover books
-    let bx = -1.36;
-    while (bx < -0.22) {
-      const bw = 0.065 + rand() * 0.045;
-      const bh = 0.34 + rand() * 0.18;
-      const bMat = new T.MeshStandardMaterial({ color: bookColors[Math.floor(rand() * bookColors.length)], roughness: 0.72 });
-      rightGroup.add(mesh(new T.BoxGeometry(bw, bh, 0.28), bMat, { pos: [bx + bw / 2, sy + 0.04 + bh / 2, 0.04] }));
+  for (const sy of [1.04, 1.88, 2.74]) {
+    rightGroup.add(mesh(new T.BoxGeometry(3.32, 0.08, 0.54), warmOak, { pos: [0, sy, 0.02] }));
+    addLightWash(rightGroup, 0, sy + 0.44, -0.17, 2.8, 0.82, 0xffca7a, 0.28);
+    let bx = -1.42;
+    while (bx < -0.20) {
+      const bw = 0.065 + rand() * 0.045, bh = 0.34 + rand() * 0.20;
+      rightGroup.add(mesh(new T.BoxGeometry(bw, bh, 0.28), new T.MeshStandardMaterial({ color: bookColors[Math.floor(rand() * bookColors.length)], roughness: 0.7 }), {
+        pos: [bx + bw / 2, sy + 0.04 + bh / 2, 0.04],
+      }));
       bx += bw + 0.012;
     }
-    // Right bay: ceramic vessels & brass accents
-    const ceramicMat = new T.MeshStandardMaterial({ color: 0xe6dac5, roughness: 0.38, metalness: 0.05 });
-    rightGroup.add(mesh(new T.CylinderGeometry(0.11, 0.15, 0.36, 16), ceramicMat, { pos: [0.46, sy + 0.22, 0.04] }));
-    rightGroup.add(mesh(new T.SphereGeometry(0.14, 14, 12), brass, { pos: [0.98, sy + 0.18, 0.06], scale: [1, 1.25, 1] }));
+    const ceramicMat = new T.MeshPhysicalMaterial({ color: 0xebe0cb, roughness: 0.28, clearcoat: 0.5 });
+    rightGroup.add(mesh(new T.CylinderGeometry(0.11, 0.15, 0.38, 16), ceramicMat, { pos: [0.46, sy + 0.23, 0.04] }));
+    rightGroup.add(mesh(new T.SphereGeometry(0.14, 14, 12), brass, { pos: [1.02, sy + 0.18, 0.06], scale: [1, 1.25, 1] }));
   }
+  const sR1 = createWallSconce(brass, sconceGlass); sR1.position.set(-2.65, 2.75, -0.32);
+  const sR2 = createWallSconce(brass, sconceGlass); sR2.position.set(2.65, 2.75, -0.32);
+  rightGroup.add(sR1, sR2);
   root.add(rightGroup);
 
-  // 9. FRONT WALL (+Z, behind camera): Panelled entry door + hanging 3D wreath + flanking sconces
+  // 9. FRONT WALL (+Z, behind camera): Grand Panelled Entry Door + Wreath + Sconces
   const frontGroup = new T.Group();
   frontGroup.position.set(0, FLOOR_Y, R - 0.18);
   frontGroup.rotation.y = Math.PI;
-  frontGroup.add(mesh(new T.BoxGeometry(2.08, 3.38, 0.16), darkWalnut, { pos: [0, 1.69, 0] }));
-  frontGroup.add(mesh(new T.BoxGeometry(2.26, 0.14, 0.22), warmOak, { pos: [0, 3.42, 0.02] }));
-  for (const dx of [-0.46, 0.46]) {
-    for (const dy of [0.88, 2.38]) {
-      frontGroup.add(mesh(new T.BoxGeometry(0.72, 1.15, 0.06), warmOak, { pos: [dx, dy, 0.08] }));
-    }
+  frontGroup.add(mesh(new T.BoxGeometry(2.20, 3.45, 0.18), darkWalnut, { pos: [0, 1.725, 0] }));
+  frontGroup.add(mesh(new T.BoxGeometry(2.44, 0.16, 0.26), warmOak, { pos: [0, 3.48, 0.03] }));
+  for (const dx of [-0.48, 0.48]) {
+    for (const dy of [0.90, 2.42]) frontGroup.add(mesh(new T.BoxGeometry(0.76, 1.18, 0.06), warmOak, { pos: [dx, dy, 0.09] }));
   }
-  frontGroup.add(mesh(new T.SphereGeometry(0.055, 12, 10), brass, { pos: [0.80, 1.56, 0.14] }));
-  const doorWreath = createWreath(0.42, evergreen, berry, velvet);
-  doorWreath.position.set(0, 2.36, 0.14);
+  frontGroup.add(mesh(new T.SphereGeometry(0.058, 12, 10), brass, { pos: [0.84, 1.58, 0.16] }));
+  const doorWreath = createWreath(0.45, evergreen, berry, velvet);
+  doorWreath.position.set(0, 2.40, 0.16);
   frontGroup.add(doorWreath);
-  for (const sx of [-1.75, 1.75]) {
+  for (const sx of [-1.95, 1.95]) {
     const sc = createWallSconce(brass, sconceGlass);
-    sc.position.set(sx, 2.65, 0.06);
+    sc.position.set(sx, 2.75, 0.06);
     frontGroup.add(sc);
   }
   root.add(frontGroup);
 
-  // Warm sconce & reading-lamp wall wash so side/back walls glow softly when orbiting 360°
-  const leftLampLight = new T.PointLight(0xffc070, 2.2, 6.8, 1.5);
-  leftLampLight.position.set(-R + 1.15, 2.35, -1.2);
-  const backWallWash = new T.PointLight(0xffc378, 1.8, 6.8, 1.55);
-  backWallWash.position.set(0, 2.85, R - 1.25);
+  // Warm ambient wall-wash lights for balanced 360° cozy glow
+  const leftLampLight = new T.PointLight(0xffc272, 2.5, 7.6, 1.45);
+  leftLampLight.position.set(-R + 1.35, 2.40, -0.4);
+  const backWallWash = new T.PointLight(0xffc478, 2.1, 7.6, 1.5);
+  backWallWash.position.set(0, 2.85, R - 1.35);
   root.add(leftLampLight, backWallWash);
 
-  // 10. Subtle floating golden dust motes in the warm room air
   const motes = createParticleField({
-    count: 55,
-    bounds: [-3.2, 3.2, 0.5, 4.2, -3.2, 3.2],
-    color: 0xffe2a8,
-    size: 8.5,
-    speedY: 0.06,
-    sway: 0.24,
-    opacity: 0.42,
-    seed: 505,
+    count: 60, bounds: [-3.4, 3.4, 0.5, 4.3, -3.4, 3.4],
+    color: 0xffe4aa, size: 8.5, speedY: 0.06, sway: 0.24, opacity: 0.44, seed: 505,
   });
   root.add(motes.object);
   animators.push(t => motes.update(t));
@@ -806,31 +703,21 @@ function buildCabinWorld() {
   return {
     group: root,
     background: new T.Color(0x131d1b),
-    fog: new T.FogExp2(0x14201d, 0.026),
+    fog: new T.FogExp2(0x14201d, 0.022),
     lighting: {
-      hemiSky: 0xffeed6,
-      hemiGround: 0x3b261b,
-      hemiIntensity: 0.72,
-      keyColor: 0xffe3bd,
-      keyIntensity: 1.75,
-      keyPos: [-2.6, 5.2, 3.8],
-      rimColor: 0x89bfff,
-      rimIntensity: 1.05,
-      rimPos: [-3.2, 3.1, -3.8],
-      fillColor: 0xffa65c,
-      fillIntensity: 0.55,
-      fillPos: [3.2, 2.4, -2.5],
-      exposure: 1.08,
+      hemiSky: 0xffeed6, hemiGround: 0x3b261b, hemiIntensity: 0.78,
+      keyColor: 0xffe3bd, keyIntensity: 1.78, keyPos: [-2.6, 5.2, 3.8],
+      rimColor: 0x89bfff, rimIntensity: 1.08, rimPos: [-3.2, 3.1, -3.8],
+      fillColor: 0xffa65c, fillIntensity: 0.62, fillPos: [3.2, 2.4, -2.5],
+      exposure: 1.10,
     },
-    update(t) {
-      for (const fn of animators) fn(t);
-    },
+    update(t) { for (const fn of animators) fn(t); },
   };
 }
 
 /**
  * ============================================================================
- * WORLD 2: VILLAGE MARKET — "Starlit European Winter Piazza"
+ * WORLD 2: VILLAGE MARKET — "Cinematic European Winter Piazza"
  * ============================================================================
  */
 function buildMarketWorld() {
@@ -838,28 +725,19 @@ function buildMarketWorld() {
   const animators = [];
 
   const cobble = cobblestoneTextures();
-  const awningTex = awningTexture('#7c222b', '#f2e6cf');
-  const brass = createBrassMaterial(0xd5a85d, 0.26);
-  const darkTimber = new T.MeshStandardMaterial({ color: 0x3a2417, roughness: 0.74 });
-  const warmTimber = new T.MeshStandardMaterial({ color: 0x6b452a, roughness: 0.68 });
-  const stucco = new T.MeshStandardMaterial({ color: 0xe6dac5, roughness: 0.86 });
-  const snowMat = new T.MeshStandardMaterial({
-    color: 0xe7effa,
-    roughness: 0.62,
-    metalness: 0.06,
-    envMapIntensity: 1.05,
-  });
-  const ironMat = new T.MeshStandardMaterial({ color: 0x1b2129, roughness: 0.42, metalness: 0.82 });
-  const evergreen = new T.MeshStandardMaterial({ color: 0x19382d, roughness: 0.82 });
-  const berry = new T.MeshStandardMaterial({ color: 0xab242a, roughness: 0.35 });
-  const warmWindowMat = new T.MeshStandardMaterial({
-    color: 0xffe4ad,
-    emissive: 0xffaa44,
-    emissiveIntensity: 1.9,
-    roughness: 0.22,
-  });
+  const brass = createBrassMaterial(0xd8aa5e, 0.26);
+  const darkTimber = createWoodMaterial('chalet-dark', { base: [62, 39, 24], grain: [24, 14, 8], hi: [98, 66, 40], repeatX: 2, repeatY: 2 }, 0.70);
+  const warmTimber = createWoodMaterial('chalet-warm', { base: [108, 70, 42], grain: [52, 30, 16], hi: [148, 102, 64], repeatX: 2, repeatY: 1 }, 0.64);
+  const stuccoTex = plasterTextures('chalet-stucco', '#efe4cf', '#dfd0b4', 2, 1);
+  const stucco = new T.MeshStandardMaterial({ map: stuccoTex.map, bumpMap: stuccoTex.bumpMap, bumpScale: 0.015, roughness: 0.85 });
+  const snowMat = new T.MeshStandardMaterial({ color: 0xeaf1fa, roughness: 0.58, metalness: 0.06, envMapIntensity: 1.05 });
+  const icicleMat = new T.MeshPhysicalMaterial({ color: 0xdff0ff, roughness: 0.08, clearcoat: 1.0, metalness: 0.15, envMapIntensity: 1.8 });
+  const ironMat = new T.MeshStandardMaterial({ color: 0x1a2028, roughness: 0.40, metalness: 0.85 });
+  const evergreen = new T.MeshStandardMaterial({ color: 0x193d2e, roughness: 0.80 });
+  const berry = new T.MeshPhysicalMaterial({ color: 0xb42228, roughness: 0.25, clearcoat: 0.8 });
+  const lanternGlass = new T.MeshStandardMaterial({ color: 0xffe8b4, emissive: 0xffb34e, emissiveIntensity: 1.95, roughness: 0.2 });
 
-  // 1. Open-air starlit twilight sky dome (custom GLSL gradient + subtle aurora)
+  // 1. Starlit twilight aurora sky dome + FULL 360° Painterly Alpine Village Skyline Panorama!
   const skyMat = new T.ShaderMaterial({
     side: T.BackSide,
     depthWrite: false,
@@ -872,21 +750,31 @@ function buildMarketWorld() {
         float h = clamp(vDir.y, 0.0, 1.0);
         vec3 zenith = vec3(0.03, 0.06, 0.16);
         vec3 mid = vec3(0.07, 0.14, 0.29);
-        vec3 horizon = vec3(0.16, 0.24, 0.40);
-        vec3 col = mix(horizon, mid, smoothstep(0.0, 0.32, h));
-        col = mix(col, zenith, smoothstep(0.32, 0.88, h));
-        // Subtle dreamy northern twilight ribbon
+        vec3 horizon = vec3(0.15, 0.24, 0.40);
+        vec3 col = mix(horizon, mid, smoothstep(0.0, 0.34, h));
+        col = mix(col, zenith, smoothstep(0.34, 0.88, h));
         float ribbon = sin(vDir.x * 3.2 + uTime * 0.12) * cos(vDir.z * 2.5 - uTime * 0.08);
-        float band = smoothstep(0.18, 0.48, h) * (1.0 - smoothstep(0.48, 0.78, h));
-        col += vec3(0.06, 0.16, 0.22) * max(0.0, ribbon) * band * 0.55;
+        float band = smoothstep(0.20, 0.48, h) * (1.0 - smoothstep(0.48, 0.80, h));
+        col += vec3(0.07, 0.18, 0.25) * max(0.0, ribbon) * band * 0.58;
         gl_FragColor = vec4(col, 1.0);
       }
     `,
   });
-  root.add(mesh(new T.SphereGeometry(28, 32, 20), skyMat, { pos: [0, 0, 0], receive: false }));
+  root.add(mesh(new T.SphereGeometry(28, 32, 20), skyMat, { receive: false }));
   animators.push(t => { skyMat.uniforms.uTime.value = t; });
 
-  // Twinkling winter starfield in upper sky dome
+  // Seamless 360° painterly nocturnal Alpine skyline cylinder (replaces primitive cones with storybook village depth!)
+  const panoramaMat = new T.MeshBasicMaterial({
+    map: alpineVistaTexture('panorama'),
+    side: T.BackSide,
+    fog: true,
+  });
+  root.add(mesh(new T.CylinderGeometry(16.8, 16.8, 11.5, 48, 1, true), panoramaMat, {
+    pos: [0, FLOOR_Y + 4.85, 0],
+    receive: false,
+  }));
+
+  // Twinkling winter starfield
   const starCount = 260;
   const starPos = new Float32Array(starCount * 3);
   const starPhase = new Float32Array(starCount);
@@ -894,10 +782,10 @@ function buildMarketWorld() {
   const rand = seeded(1225);
   for (let i = 0; i < starCount; i++) {
     const theta = rand() * Math.PI * 2;
-    const phi = 0.18 + rand() * 1.15;
+    const phi = 0.28 + rand() * 1.1;
     const rad = 24;
     starPos[i * 3] = rad * Math.cos(phi) * Math.sin(theta);
-    starPos[i * 3 + 1] = rad * Math.sin(phi) + 1.5;
+    starPos[i * 3 + 1] = rad * Math.sin(phi) + 2.0;
     starPos[i * 3 + 2] = rad * Math.cos(phi) * Math.cos(theta);
     starPhase[i] = rand() * Math.PI * 2;
     starScale[i] = 0.6 + rand() * 1.1;
@@ -907,15 +795,10 @@ function buildMarketWorld() {
   starGeo.setAttribute('aPhase', new T.BufferAttribute(starPhase, 1));
   starGeo.setAttribute('aScale', new T.BufferAttribute(starScale, 1));
   const starMat = new T.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: T.AdditiveBlending,
+    transparent: true, depthWrite: false, blending: T.AdditiveBlending,
     uniforms: { uTime: { value: 0 } },
     vertexShader: `
-      attribute float aPhase;
-      attribute float aScale;
-      uniform float uTime;
-      varying float vA;
+      attribute float aPhase; attribute float aScale; uniform float uTime; varying float vA;
       void main() {
         vA = 0.45 + 0.55 * sin(uTime * 1.8 + aPhase);
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -928,165 +811,153 @@ function buildMarketWorld() {
       void main() {
         float r = length(gl_PointCoord - 0.5);
         if (r > 0.5) discard;
-        float s = pow(1.0 - r * 2.0, 2.0);
-        gl_FragColor = vec4(0.88, 0.94, 1.0, s * vA);
+        gl_FragColor = vec4(0.90, 0.95, 1.0, pow(1.0 - r * 2.0, 2.0) * vA);
       }
     `,
   });
   root.add(new T.Points(starGeo, starMat));
   animators.push(t => { starMat.uniforms.uTime.value = t; });
 
-  // Luminous winter moon in upper-left sky
-  root.add(mesh(new T.SphereGeometry(0.75, 20, 16), new T.MeshBasicMaterial({ color: 0xf7f1dc }), {
-    pos: [-8.5, 11.2, -16.5],
-    receive: false,
-  }));
-  addGlow(root, -8.5, 11.2, -16.0, 0xa8d0ff, 5.8, 0.36);
+  // Luminous crescent moon overhead
+  root.add(mesh(new T.SphereGeometry(0.75, 20, 16), new T.MeshBasicMaterial({ color: 0xf9f3de }), { pos: [-7.8, 11.4, -16.5], receive: false }));
+  addGlow(root, -7.8, 11.4, -16.0, 0xa8d0ff, 6.2, 0.38);
 
-  // 2. Circular European cobblestone piazza ground
+  // 2. Snow-dusted European cobblestone piazza ground
   const cobbleMat = new T.MeshStandardMaterial({
-    map: cobble.map,
-    roughnessMap: cobble.roughnessMap,
-    bumpMap: cobble.bumpMap,
-    bumpScale: 0.02,
-    roughness: 0.76,
-    metalness: 0.08,
-    envMapIntensity: 0.95,
+    map: cobble.map, roughnessMap: cobble.roughnessMap, bumpMap: cobble.bumpMap,
+    bumpScale: 0.022, roughness: 0.72, metalness: 0.08, envMapIntensity: 1.02,
   });
-  root.add(mesh(new T.CircleGeometry(16, 64), cobbleMat, {
-    pos: [0, FLOOR_Y, 0],
-    rot: [-Math.PI / 2, 0, 0],
-    receive: true,
-  }));
+  root.add(mesh(new T.CircleGeometry(17.5, 64), cobbleMat, { pos: [0, FLOOR_Y, 0], rot: [-Math.PI / 2, 0, 0], receive: true }));
 
-  // 3. Center Stage: Dressed-Limestone Medallion & Brass Plaza Plinth (top flush at STAGE_Y = 0.216!)
-  const stonePlinthMat = new T.MeshStandardMaterial({ color: 0x8d99ab, roughness: 0.72, metalness: 0.06 });
-  root.add(mesh(new T.CylinderGeometry(1.86, 1.98, 0.022, 8), stonePlinthMat, {
-    pos: [0, FLOOR_Y + 0.009, 0],
-    rot: [0, Math.PI / 8, 0],
-    receive: true,
+  // 3. Dressed-Limestone Medallion Plaza Plinth + Brass Rim + 4 Festive Bollard Uplights
+  const stonePlinthMat = new T.MeshStandardMaterial({ color: 0x8d99ab, roughness: 0.70, metalness: 0.06 });
+  root.add(mesh(new T.CylinderGeometry(1.86, 1.98, 0.022, 8), stonePlinthMat, { pos: [0, FLOOR_Y + 0.009, 0], rot: [0, Math.PI / 8, 0], receive: true }));
+  root.add(mesh(new T.CylinderGeometry(1.76, 1.79, 0.024, 48), new T.MeshStandardMaterial({ map: plazaPlinthTexture(), roughness: 0.66, metalness: 0.08, envMapIntensity: 1.0 }), {
+    pos: [0, FLOOR_Y + 0.008, 0], receive: true,
   }));
-  const medallionMat = new T.MeshStandardMaterial({
-    map: plazaPlinthTexture(),
-    roughness: 0.68,
-    metalness: 0.08,
-    envMapIntensity: 0.95,
-  });
-  root.add(mesh(new T.CylinderGeometry(1.76, 1.79, 0.024, 48), medallionMat, {
-    pos: [0, FLOOR_Y + 0.008, 0],
-    receive: true,
-  }));
-  // Brass inlay ring around plinth perimeter
-  root.add(mesh(new T.TorusGeometry(1.78, 0.014, 8, 48), brass, {
-    pos: [0, STAGE_Y, 0],
-    rot: [Math.PI / 2, 0, 0],
-  }));
+  root.add(mesh(new T.TorusGeometry(1.78, 0.015, 8, 48), brass, { pos: [0, STAGE_Y, 0], rot: [Math.PI / 2, 0, 0] }));
   root.add(createContactShadow(1.38));
 
-  // 4 subtle brass perimeter bollard uplights around the plinth (at r = 2.02, out of floor-item collision!)
   for (let i = 0; i < 4; i++) {
     const a = (i * Math.PI) / 2 + Math.PI / 4;
-    const bx = Math.cos(a) * 2.05;
-    const bz = Math.sin(a) * 2.05;
+    const bx = Math.cos(a) * 2.08, bz = Math.sin(a) * 2.08;
     const bol = new T.Group();
     bol.position.set(bx, FLOOR_Y, bz);
-    bol.add(mesh(new T.CylinderGeometry(0.055, 0.072, 0.34, 12), ironMat, { pos: [0, 0.17, 0] }));
-    bol.add(mesh(new T.CylinderGeometry(0.048, 0.048, 0.09, 12), warmWindowMat, { pos: [0, 0.36, 0], receive: false }));
-    bol.add(mesh(new T.ConeGeometry(0.075, 0.07, 12), brass, { pos: [0, 0.44, 0] }));
-    addGlow(bol, 0, 0.36, 0, 0xffc66e, 0.45, 0.58);
+    bol.add(mesh(new T.CylinderGeometry(0.055, 0.074, 0.34, 12), ironMat, { pos: [0, 0.17, 0] }));
+    bol.add(mesh(new T.CylinderGeometry(0.048, 0.048, 0.09, 12), lanternGlass, { pos: [0, 0.36, 0], receive: false }));
+    bol.add(mesh(new T.ConeGeometry(0.078, 0.075, 12), brass, { pos: [0, 0.44, 0] }));
+    addGlow(bol, 0, 0.36, 0, 0xffc66e, 0.48, 0.60);
+    addLightWash(bol, 0, 0.01, 0, 1.25, 1.25, 0xffbe66, 0.28, [-Math.PI / 2, 0, 0]);
     root.add(bol);
   }
 
-  // 4. Sculpted Half-Timbered Alpine Market Chalets (3 stalls placed around the piazza at r ~ 6.1)
-  function buildChalet(angle, awningColor = '#7c222b') {
+  // 4. Four High-Craft Half-Timbered Alpine Market Chalets with Painted Shop Interiors, Signboards, Icicles & Barrels!
+  function buildChalet(angle, { awningColor, signTitle, signSub, variant = 0 }) {
     const g = new T.Group();
-    const dist = 6.35;
+    const dist = 6.25;
     g.position.set(Math.sin(angle) * dist, FLOOR_Y, Math.cos(angle) * dist);
-    g.rotation.y = angle + Math.PI; // face piazza center
+    g.rotation.y = angle + Math.PI;
 
-    // Main timber chalet body
-    g.add(mesh(new T.BoxGeometry(3.4, 2.75, 2.0), darkTimber, { pos: [0, 1.375, 0] }));
-    // Stucco upper half-timbered panel
-    g.add(mesh(new T.BoxGeometry(3.26, 1.15, 2.04), stucco, { pos: [0, 2.05, 0] }));
-    // Front timber framing posts & counter
-    for (const px of [-1.58, 1.58]) {
-      g.add(mesh(new T.BoxGeometry(0.16, 2.78, 0.18), darkTimber, { pos: [px, 1.39, 0.98] }));
+    // Plank-textured chalet walls + stucco half-timbered upper gable
+    g.add(mesh(new T.BoxGeometry(3.65, 2.82, 2.15), darkTimber, { pos: [0, 1.41, 0] }));
+    g.add(mesh(new T.BoxGeometry(3.48, 1.15, 2.19), stucco, { pos: [0, 2.15, 0] }));
+    // Carved half-timber corner posts & decorative diagonal X-braces
+    for (const px of [-1.72, 1.72]) g.add(mesh(new T.BoxGeometry(0.18, 2.88, 0.22), darkTimber, { pos: [px, 1.44, 1.04] }));
+    for (const sx of [-1.30, 1.30]) {
+      g.add(mesh(new T.BoxGeometry(0.08, 0.72, 0.06), darkTimber, { pos: [sx, 2.48, 1.10], rot: [0, 0, sx > 0 ? 0.48 : -0.48] }));
     }
-    g.add(mesh(new T.BoxGeometry(3.52, 0.12, 0.62), warmTimber, { pos: [0, 1.08, 1.12] }));
+    // Warm honey-oak serving counter with lower panelled timber facade
+    g.add(mesh(new T.BoxGeometry(3.72, 0.13, 0.68), warmTimber, { pos: [0, 1.08, 1.16] }));
+    g.add(mesh(new T.BoxGeometry(3.54, 0.96, 0.14), warmTimber, { pos: [0, 0.54, 1.06] }));
+    for (let x = -1.2; x <= 1.2; x += 0.8) addBoiserieFrame(g, x, 0.54, 1.14, 0.62, 0.66, darkTimber);
 
-    // Warm glowing interior shop alcove
-    g.add(mesh(new T.PlaneGeometry(2.96, 1.35), warmWindowMat, { pos: [0, 1.76, 1.02], receive: false }));
-    // Window mullions across shop front
-    g.add(mesh(new T.BoxGeometry(0.08, 1.38, 0.08), darkTimber, { pos: [-0.75, 1.76, 1.04] }));
-    g.add(mesh(new T.BoxGeometry(0.08, 1.38, 0.08), darkTimber, { pos: [0.75, 1.76, 1.04] }));
+    // Richly painted glowing Christmas shop interior behind dark-timber window mullions!
+    const shopMat = new T.MeshBasicMaterial({ map: chaletInteriorTexture(variant) });
+    g.add(mesh(new T.PlaneGeometry(3.16, 1.38), shopMat, { pos: [0, 1.78, 1.09], receive: false }));
+    for (const mx of [-0.82, 0.82]) g.add(mesh(new T.BoxGeometry(0.075, 1.42, 0.08), darkTimber, { pos: [mx, 1.78, 1.12] }));
+    g.add(mesh(new T.BoxGeometry(3.20, 0.06, 0.08), darkTimber, { pos: [0, 1.98, 1.12] }));
+    // Warm golden light pool spilling onto the cobblestone plaza in front of the stall!
+    addLightWash(g, 0, 0.015, 2.1, 3.8, 2.6, 0xffbe66, 0.34, [-Math.PI / 2, 0, 0]);
 
-    // Striped pitched fabric awning overhanging the counter
-    const awMat = new T.MeshStandardMaterial({
-      map: awningColor === '#7c222b' ? awningTex : awningTexture(awningColor, '#f2e6cf'),
-      roughness: 0.85,
-      side: T.DoubleSide,
-    });
-    g.add(mesh(new T.PlaneGeometry(3.56, 1.05), awMat, { pos: [0, 2.38, 1.38], rot: [-Math.PI / 2 + 0.44, 0, 0] }));
+    // Striped pitched fabric awning + hanging scalloped valance + warm awning mini-lights
+    const awMat = new T.MeshStandardMaterial({ map: awningTexture(awningColor, '#f4e7cf'), roughness: 0.84, side: T.DoubleSide });
+    g.add(mesh(new T.PlaneGeometry(3.74, 1.12), awMat, { pos: [0, 2.42, 1.44], rot: [-Math.PI / 2 + 0.44, 0, 0] }));
+    g.add(mesh(new T.BoxGeometry(3.74, 0.18, 0.03), awMat, { pos: [0, 2.13, 1.94] }));
+    for (let i = -5; i <= 5; i++) {
+      addGlow(g, i * 0.33, 2.04, 1.97, 0xffd384, 0.28, 0.68);
+    }
 
-    // Pitched snow-blanketed Alpine roof + gable
-    const roofW = 2.42;
-    const roofL = 3.95;
-    const roofMat = snowMat;
-    g.add(mesh(new T.BoxGeometry(roofL, 0.16, roofW), roofMat, { pos: [0, 3.38, 0.65], rot: [0.52, 0, 0] }));
-    g.add(mesh(new T.BoxGeometry(roofL, 0.16, roofW), roofMat, { pos: [0, 3.38, -0.65], rot: [-0.52, 0, 0] }));
-    // Dark wooden gable soffit beneath snow roof
-    g.add(mesh(new T.BoxGeometry(roofL - 0.1, 0.12, roofW - 0.1), darkTimber, { pos: [0, 3.26, 0.65], rot: [0.52, 0, 0] }));
-    g.add(mesh(new T.BoxGeometry(roofL - 0.1, 0.12, roofW - 0.1), darkTimber, { pos: [0, 3.26, -0.65], rot: [-0.52, 0, 0] }));
+    // Thick snow-blanketed Alpine pitched roof + glittering 3D crystal icicles along the eaves!
+    const roofW = 2.55, roofL = 4.20;
+    g.add(mesh(new T.BoxGeometry(roofL, 0.20, roofW), snowMat, { pos: [0, 3.44, 0.68], rot: [0.52, 0, 0] }));
+    g.add(mesh(new T.BoxGeometry(roofL, 0.20, roofW), snowMat, { pos: [0, 3.44, -0.68], rot: [-0.52, 0, 0] }));
+    g.add(mesh(new T.BoxGeometry(roofL - 0.10, 0.14, roofW - 0.10), darkTimber, { pos: [0, 3.30, 0.68], rot: [0.52, 0, 0] }));
+    g.add(mesh(new T.BoxGeometry(roofL - 0.10, 0.14, roofW - 0.10), darkTimber, { pos: [0, 3.30, -0.68], rot: [-0.52, 0, 0] }));
+    for (let i = -8; i <= 8; i++) {
+      const ilen = 0.14 + ((i * 7 + 5) % 4) * 0.045;
+      g.add(mesh(new T.ConeGeometry(0.022, ilen, 5), icicleMat, {
+        pos: [i * 0.24, 2.74 - ilen * 0.5, 1.76], rot: [Math.PI, 0, 0], receive: false,
+      }));
+    }
 
-    // Countertop festive props: miniature gift boxes, mugs & glowing lantern
-    const giftColors = [0x9e2a2b, 0x225542, 0xc99648];
+    // Carved wooden hanging signboard prominently mounted along the front gable overhang!
+    const signMat = new T.MeshStandardMaterial({ map: signTexture(signTitle, signSub), roughness: 0.62 });
+    g.add(mesh(new T.BoxGeometry(1.62, 0.44, 0.07), darkTimber, { pos: [0, 2.86, 1.82] }));
+    g.add(mesh(new T.PlaneGeometry(1.50, 0.36), signMat, { pos: [0, 2.86, 1.86] }));
+
+    // Lush 3D lit pine garland across chalet fascia
+    const chalGarland = createPineGarland(3.52, 0.14, evergreen, berry, true);
+    chalGarland.position.set(0, 2.66, 1.18);
+    g.add(chalGarland);
+
+    // Countertop wrapped gifts & glowing brass lantern
     for (let i = 0; i < 3; i++) {
-      g.add(mesh(new T.BoxGeometry(0.24, 0.22, 0.24), new T.MeshStandardMaterial({ color: giftColors[i], roughness: 0.6 }), {
-        pos: [-1.05 + i * 0.34, 1.25, 1.18],
-        rot: [0, i * 0.3, 0],
+      const gc = [0x9e2a2b, 0x225542, 0xc99648][i];
+      g.add(mesh(new T.BoxGeometry(0.24, 0.22, 0.24), new T.MeshStandardMaterial({ color: gc, roughness: 0.56 }), {
+        pos: [-1.18 + i * 0.34, 1.25, 1.22], rot: [0, i * 0.28, 0],
       }));
     }
-    // Glowing brass lantern on counter
-    g.add(mesh(new T.CylinderGeometry(0.08, 0.09, 0.24, 8), warmWindowMat, { pos: [1.02, 1.26, 1.18], receive: false }));
-    g.add(mesh(new T.ConeGeometry(0.11, 0.09, 8), brass, { pos: [1.02, 1.42, 1.18] }));
-    addGlow(g, 1.02, 1.28, 1.22, 0xffbe60, 0.95, 0.65);
+    g.add(mesh(new T.CylinderGeometry(0.085, 0.095, 0.26, 8), lanternGlass, { pos: [1.14, 1.27, 1.22], receive: false }));
+    g.add(mesh(new T.ConeGeometry(0.115, 0.095, 8), brass, { pos: [1.14, 1.44, 1.22] }));
+    addGlow(g, 1.14, 1.29, 1.26, 0xffbe60, 0.98, 0.68);
 
-    // Evergreen swag along fascia
-    for (let i = -6; i <= 6; i++) {
-      g.add(mesh(new T.SphereGeometry(0.11, 7, 6), evergreen, {
-        pos: [i * 0.26, 2.66 - Math.abs(Math.sin(i * 0.4)) * 0.08, 1.08],
-        scale: [1.3, 0.8, 0.8],
-      }));
-      if (i % 2 === 0) g.add(mesh(new T.SphereGeometry(0.03, 6, 6), berry, { pos: [i * 0.26, 2.65, 1.16] }));
-    }
+    // Standing oak wine-barrel bistro table beside chalet with glowing candle lantern!
+    const barrel = new T.Group();
+    barrel.position.set(2.38, 0, 0.95);
+    barrel.add(mesh(new T.CylinderGeometry(0.30, 0.32, 0.96, 16), warmTimber, { pos: [0, 0.48, 0] }));
+    for (const ry of [0.22, 0.74]) barrel.add(mesh(new T.TorusGeometry(0.315, 0.015, 6, 20), ironMat, { pos: [0, ry, 0], rot: [Math.PI / 2, 0, 0] }));
+    barrel.add(mesh(new T.CylinderGeometry(0.42, 0.42, 0.05, 20), darkTimber, { pos: [0, 0.98, 0] }));
+    barrel.add(mesh(new T.CylinderGeometry(0.065, 0.072, 0.18, 8), lanternGlass, { pos: [0, 1.10, 0], receive: false }));
+    addGlow(barrel, 0, 1.12, 0, 0xffc66e, 0.62, 0.62);
+    g.add(barrel);
 
     root.add(g);
   }
 
-  buildChalet(Math.PI + 0.54, '#7c222b'); // Back-left hero chalet
-  buildChalet(Math.PI - 0.58, '#234a3c'); // Back-right hero chalet
-  buildChalet(0.68, '#7c222b');           // Behind-right chalet (visible on 180° orbit)
+  buildChalet(Math.PI + 0.56, { awningColor: '#7c222b', signTitle: 'GLÜHWEIN', signSub: 'Winter Spiced Wine', variant: 0 });
+  buildChalet(Math.PI - 0.56, { awningColor: '#224a3c', signTitle: 'NOËL CRAFTS', signSub: 'Handcrafted Gifts', variant: 1 });
+  buildChalet(0.62, { awningColor: '#7c222b', signTitle: 'LEBKUCHEN', signSub: 'Gingerbread & Sweets', variant: 0 });
+  buildChalet(-0.68, { awningColor: '#224a3c', signTitle: 'WINTER TOYS', signSub: 'Alpine Woodwork', variant: 1 });
 
-  // 5. Four Victorian Wrought-Iron Streetlamps + Overhead Catenary Festoon String Lights
+  // 5. Five Vintage Wrought-Iron Streetlamps + Warm Ground Light Pools + Overhead Catenary Festoon Lights
   const lampPositions = [];
-  const festoonAngles = [-2.52, -1.30, -0.18, 1.38, 2.52];
+  const festoonAngles = [-2.52, -1.26, 0.0, 1.26, 2.52];
   const lampR = 5.15;
   for (const a of festoonAngles) {
-    const lx = Math.sin(a) * lampR;
-    const lz = Math.cos(a) * lampR;
-    lampPositions.push(new T.Vector3(lx, FLOOR_Y + 4.05, lz));
-
+    const lx = Math.sin(a) * lampR, lz = Math.cos(a) * lampR;
+    lampPositions.push(new T.Vector3(lx, FLOOR_Y + 4.10, lz));
     const post = new T.Group();
     post.position.set(lx, FLOOR_Y, lz);
-    post.add(mesh(new T.CylinderGeometry(0.11, 0.16, 0.55, 10), ironMat, { pos: [0, 0.275, 0] }));
-    post.add(mesh(new T.CylinderGeometry(0.045, 0.075, 3.65, 10), ironMat, { pos: [0, 2.15, 0] }));
-    post.add(mesh(new T.CylinderGeometry(0.18, 0.11, 0.34, 6), warmWindowMat, { pos: [0, 4.18, 0], receive: false }));
-    post.add(mesh(new T.ConeGeometry(0.24, 0.18, 6), ironMat, { pos: [0, 4.44, 0] }));
-    addGlow(post, 0, 4.18, 0, 0xffca70, 1.45, 0.72);
+    post.add(mesh(new T.CylinderGeometry(0.12, 0.17, 0.58, 10), ironMat, { pos: [0, 0.29, 0] }));
+    post.add(mesh(new T.CylinderGeometry(0.045, 0.076, 3.68, 10), ironMat, { pos: [0, 2.18, 0] }));
+    post.add(mesh(new T.CylinderGeometry(0.19, 0.115, 0.36, 6), lanternGlass, { pos: [0, 4.22, 0], receive: false }));
+    post.add(mesh(new T.ConeGeometry(0.25, 0.19, 6), ironMat, { pos: [0, 4.49, 0] }));
+    addGlow(post, 0, 4.22, 0, 0xffca70, 1.55, 0.76);
+    addLightWash(post, 0, 0.015, 0, 3.6, 3.6, 0xffbf66, 0.32, [-Math.PI / 2, 0, 0]);
     root.add(post);
   }
 
-  // Overhead catenary festoon cables + glowing warm market bulbs spanning around the square
+  // Overhead catenary festoon light strands around the square
   const festoonBulbPos = [];
   const wireMat = new T.MeshStandardMaterial({ color: 0x1e2228, roughness: 0.7 });
   for (let i = 0; i < lampPositions.length; i++) {
@@ -1096,99 +967,41 @@ function buildMarketWorld() {
     mid.y -= 0.72;
     const curve = new T.CatmullRomCurve3([pA, mid, pB]);
     root.add(mesh(new T.TubeGeometry(curve, 18, 0.012, 6, false), wireMat, { receive: false }));
-    for (let k = 1; k <= 7; k++) {
-      festoonBulbPos.push(curve.getPoint(k / 8));
-    }
+    for (let k = 1; k <= 7; k++) festoonBulbPos.push(curve.getPoint(k / 8));
   }
-  const festoonBulbs = new T.InstancedMesh(
-    new T.SphereGeometry(0.048, 8, 6),
-    new T.MeshBasicMaterial({ color: 0xffe09a }),
-    festoonBulbPos.length
-  );
+  const festoonBulbs = new T.InstancedMesh(new T.SphereGeometry(0.048, 8, 6), new T.MeshBasicMaterial({ color: 0xffe4a0 }), festoonBulbPos.length);
   const m4 = new T.Matrix4();
   festoonBulbPos.forEach((p, idx) => {
     m4.makeTranslation(p.x, p.y, p.z);
     festoonBulbs.setMatrixAt(idx, m4);
-    if (idx % 2 === 0) addGlow(root, p.x, p.y, p.z, 0xffc76e, 0.56, 0.42);
+    if (idx % 2 === 0) addGlow(root, p.x, p.y, p.z, 0xffc76e, 0.58, 0.46);
   });
   festoonBulbs.instanceMatrix.needsUpdate = true;
   root.add(festoonBulbs);
 
-  // 6. Outer ring of sculpted 5-tier frosted Alpine spruces & distant gabled village houses
-  const darkPine = new T.MeshStandardMaterial({ color: 0x142c26, roughness: 0.86 });
-  const gableMat = new T.MeshStandardMaterial({ color: 0x1c2536, roughness: 0.88 });
-  for (let i = 0; i < 18; i++) {
-    const a = (i / 18) * Math.PI * 2 + 0.14;
-    const r = 9.4 + (i % 3) * 1.45;
-    const h = 3.2 + (i % 4) * 0.85;
-    const px = Math.sin(a) * r;
-    const pz = Math.cos(a) * r;
-    const pine = new T.Group();
-    pine.position.set(px, FLOOR_Y, pz);
-    // Trunk
-    pine.add(mesh(new T.CylinderGeometry(0.11, 0.16, h * 0.28, 7), darkTimber, { pos: [0, h * 0.14, 0] }));
-    // 5 organic graduated bough tiers with delicate snow-dusted crown edges
-    const tiers = 5;
-    for (let t = 0; t < tiers; t++) {
-      const f = t / (tiers - 1);
-      const rad = (1.15 - f * 0.74) * (0.92 + (i % 2) * 0.14);
-      const th = h * (0.34 - f * 0.04);
-      const ty = h * (0.24 + f * 0.64);
-      pine.add(mesh(new T.ConeGeometry(rad, th, 9), darkPine, {
-        pos: [0, ty, 0],
-        rot: [0, t * 0.55 + i, 0],
-      }));
-      // Subtle snow blanket capping each tier slightly higher rather than one giant white cone
-      pine.add(mesh(new T.ConeGeometry(rad * 0.86, th * 0.36, 9), snowMat, {
-        pos: [0, ty + th * 0.24, 0],
-        rot: [0, t * 0.55 + i, 0],
-      }));
+  // Carved stone evergreen winter planters framing the square
+  for (const a of [-1.92, 1.92, -0.02, Math.PI]) {
+    const px = Math.sin(a) * 4.85, pz = Math.cos(a) * 4.85;
+    const urn = new T.Group();
+    urn.position.set(px, FLOOR_Y, pz);
+    urn.add(mesh(new T.CylinderGeometry(0.36, 0.28, 0.44, 8), stonePlinthMat, { pos: [0, 0.22, 0] }));
+    urn.add(mesh(new T.CylinderGeometry(0.40, 0.38, 0.08, 8), stonePlinthMat, { pos: [0, 0.46, 0] }));
+    for (let k = 0; k < 7; k++) {
+      const ka = (k / 7) * Math.PI * 2;
+      urn.add(mesh(new T.ConeGeometry(0.14, 0.42, 6), evergreen, { pos: [Math.cos(ka) * 0.14, 0.64, Math.sin(ka) * 0.14], rot: [Math.sin(ka) * 0.4, 0, -Math.cos(ka) * 0.4] }));
     }
-    root.add(pine);
-
-    // Distant warm-lit Alpine village house silhouettes between outer pines
-    if (i % 3 === 1) {
-      const hr = r + 2.4;
-      const ha = a + 0.16;
-      const house = new T.Group();
-      house.position.set(Math.sin(ha) * hr, FLOOR_Y, Math.cos(ha) * hr);
-      house.rotation.y = ha + Math.PI;
-      const hh = 2.6 + (i % 2) * 0.9;
-      house.add(mesh(new T.BoxGeometry(2.1, hh, 1.6), gableMat, { pos: [0, hh / 2, 0] }));
-      house.add(mesh(new T.ConeGeometry(1.72, 1.45, 4), snowMat, { pos: [0, hh + 0.65, 0], rot: [0, Math.PI / 4, 0] }));
-      for (const wx of [-0.46, 0.46]) {
-        house.add(mesh(new T.PlaneGeometry(0.32, 0.44), warmWindowMat, { pos: [wx, hh * 0.62, 0.82], receive: false }));
-      }
-      root.add(house);
-    }
-  }
-  // Soft snowbank pillows around outer piazza edge
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2;
-    const sr = 6.9 + (i % 2) * 0.8;
-    root.add(mesh(new T.SphereGeometry(1.15, 14, 10), snowMat, {
-      pos: [Math.sin(a) * sr, FLOOR_Y - 0.15, Math.cos(a) * sr],
-      scale: [1.4, 0.36, 1.1],
-    }));
+    urn.add(mesh(new T.ConeGeometry(0.16, 0.56, 7), evergreen, { pos: [0, 0.72, 0] }));
+    addGlow(urn, 0, 0.74, 0, 0xffd284, 0.48, 0.52);
+    root.add(urn);
   }
 
-  // Warm lantern point lights around the square
-  const marketWarmL = new T.PointLight(0xffb55a, 3.2, 11, 1.5);
-  marketWarmL.position.set(-3.2, 3.6, -4.1);
-  const marketWarmR = new T.PointLight(0xffa94c, 3.0, 11, 1.5);
-  marketWarmR.position.set(3.2, 3.6, -4.1);
+  const marketWarmL = new T.PointLight(0xffb55a, 3.6, 12, 1.45); marketWarmL.position.set(-3.2, 3.6, -4.1);
+  const marketWarmR = new T.PointLight(0xffa94c, 3.4, 12, 1.45); marketWarmR.position.set(3.2, 3.6, -4.1);
   root.add(marketWarmL, marketWarmR);
 
-  // 7. Magical drifting 3D winter snowfall across the open piazza!
   const snowfall = createParticleField({
-    count: 240,
-    bounds: [-7.5, 7.5, 0.25, 6.2, -7.5, 7.5],
-    color: 0xe6f1ff,
-    size: 14,
-    speedY: -0.45,
-    sway: 0.32,
-    opacity: 0.82,
-    seed: 1224,
+    count: 260, bounds: [-7.8, 7.8, 0.25, 6.4, -7.8, 7.8],
+    color: 0xe8f3ff, size: 14, speedY: -0.45, sway: 0.32, opacity: 0.85, seed: 1224,
   });
   root.add(snowfall.object);
   animators.push(t => snowfall.update(t));
@@ -1196,31 +1009,21 @@ function buildMarketWorld() {
   return {
     group: root,
     background: new T.Color(0x0b152a),
-    fog: new T.FogExp2(0x101d36, 0.032),
+    fog: new T.FogExp2(0x101d36, 0.025),
     lighting: {
-      hemiSky: 0x9fc2f5,
-      hemiGround: 0x2a2433,
-      hemiIntensity: 0.78,
-      keyColor: 0xffe4bc,
-      keyIntensity: 1.55,
-      keyPos: [-2.8, 5.4, 3.9],
-      rimColor: 0x9ac6ff,
-      rimIntensity: 1.35,
-      rimPos: [2.4, 4.2, -4.5],
-      fillColor: 0xffb35e,
-      fillIntensity: 0.65,
-      fillPos: [-3.4, 2.2, -2.2],
-      exposure: 1.06,
+      hemiSky: 0xa4c6f8, hemiGround: 0x2c2535, hemiIntensity: 0.82,
+      keyColor: 0xffe4bc, keyIntensity: 1.60, keyPos: [-2.8, 5.4, 3.9],
+      rimColor: 0x9ac6ff, rimIntensity: 1.38, rimPos: [2.4, 4.2, -4.5],
+      fillColor: 0xffb35e, fillIntensity: 0.72, fillPos: [-3.4, 2.2, -2.2],
+      exposure: 1.08,
     },
-    update(t) {
-      for (const fn of animators) fn(t);
-    },
+    update(t) { for (const fn of animators) fn(t); },
   };
 }
 
 /**
  * ============================================================================
- * WORLD 3: GINGERBREAD BAKERY — "Warm Terracotta Patisserie Atelier"
+ * WORLD 3: GINGERBREAD BAKERY — "Parisian Terracotta Patisserie Atelier"
  * ============================================================================
  */
 function buildBakeryWorld() {
@@ -1228,285 +1031,219 @@ function buildBakeryWorld() {
   const animators = [];
 
   const tiles = bakeryTileTextures();
-  const wallPlaster = plasterTextures('bakery-terracotta', '#964431', '#6e2d20', 4, 2);
-  const creamTrim = new T.MeshStandardMaterial({ color: 0xf1e3ca, roughness: 0.62 });
-  const honeyOak = new T.MeshStandardMaterial({ color: 0x875532, roughness: 0.50, envMapIntensity: 0.95 });
-  const cocoaWood = new T.MeshStandardMaterial({ color: 0x452618, roughness: 0.58 });
-  const copper = createBrassMaterial(0xd98456, 0.24);
-  const brass = createBrassMaterial(0xdcb062, 0.26);
-  const marble = new T.MeshStandardMaterial({ color: 0xf4ede1, roughness: 0.22, metalness: 0.05, envMapIntensity: 1.2 });
-  const evergreen = new T.MeshStandardMaterial({ color: 0x244e3a, roughness: 0.78 });
-  const berry = new T.MeshPhysicalMaterial({ color: 0xb02328, roughness: 0.25, clearcoat: 0.8 });
-  const velvet = new T.MeshStandardMaterial({ color: 0x85232b, roughness: 0.80 });
-  const glassMat = new T.MeshPhysicalMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.22,
-    roughness: 0.08,
-    clearcoat: 1.0,
-    depthWrite: false,
-  });
-  const globeLightMat = new T.MeshStandardMaterial({
-    color: 0xfff3d8,
-    emissive: 0xffca7a,
-    emissiveIntensity: 1.7,
-    roughness: 0.2,
-  });
+  const wallPlaster = plasterTextures('bakery-terracotta', '#964532', '#703022', 4, 2);
+  const bricks = brickTextures();
+  const creamTrim = new T.MeshStandardMaterial({ color: 0xf2e5ce, roughness: 0.58 });
+  const honeyOak = createWoodMaterial('bakery-oak', { base: [134, 88, 52], grain: [72, 42, 22], hi: [176, 126, 82], repeatX: 2, repeatY: 2 }, 0.48);
+  const cocoaWood = createWoodMaterial('bakery-cocoa', { base: [68, 39, 25], grain: [30, 16, 10], hi: [102, 62, 40], repeatX: 2, repeatY: 2 }, 0.54);
+  const copper = createBrassMaterial(0xdc8858, 0.22);
+  const brass = createBrassMaterial(0xe0b464, 0.25);
+  const marble = new T.MeshPhysicalMaterial({ color: 0xf5efe4, roughness: 0.18, metalness: 0.04, clearcoat: 0.45, envMapIntensity: 1.25 });
+  const evergreen = new T.MeshStandardMaterial({ color: 0x224d38, roughness: 0.78 });
+  const berry = new T.MeshPhysicalMaterial({ color: 0xb42228, roughness: 0.22, clearcoat: 0.85 });
+  const velvet = new T.MeshPhysicalMaterial({ color: 0x85232b, roughness: 0.78, sheen: 0.6 });
+  const glassMat = new T.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.20, roughness: 0.06, clearcoat: 1.0, depthWrite: false });
+  const globeLightMat = new T.MeshStandardMaterial({ color: 0xfff4da, emissive: 0xffcc7e, emissiveIntensity: 1.75, roughness: 0.18 });
 
   const R = 5.95;
-  const H = 5.35;
+  const H = 5.38;
 
-  // 1. Satin checkerboard glazed ceramic floor
+  // 1. Honed limestone & warm travertine diagonal patisserie tile floor
   const floorMat = new T.MeshStandardMaterial({
-    map: tiles.map,
-    roughnessMap: tiles.roughnessMap,
-    bumpMap: tiles.bumpMap,
-    bumpScale: 0.01,
-    roughness: 0.52,
-    metalness: 0.08,
-    envMapIntensity: 1.15,
+    map: tiles.map, roughnessMap: tiles.roughnessMap, bumpMap: tiles.bumpMap,
+    bumpScale: 0.011, roughness: 0.50, metalness: 0.06, envMapIntensity: 1.15,
   });
-  root.add(mesh(new T.PlaneGeometry(R * 2.1, R * 2.1), floorMat, {
-    pos: [0, FLOOR_Y, 0],
-    rot: [-Math.PI / 2, 0, Math.PI / 4], // Diagonal diamond checkerboard!
-    receive: true,
+  root.add(mesh(new T.PlaneGeometry(R * 2.15, R * 2.15), floorMat, {
+    pos: [0, FLOOR_Y, 0], rot: [-Math.PI / 2, 0, Math.PI / 4], receive: true,
   }));
 
-  // 2. Scalloped cream & cinnamon braided wool rug under the tree
-  const rugTex = rugTexture('bakery', {
-    base: '#f3e5cc',
-    ring1: '#9c4331',
-    ring2: '#c98e4b',
-    accent: '#59301e',
-  });
+  // 2. Scalloped cream & cinnamon braided wool rug
+  const rugTex = rugTexture('bakery', { base: '#f3e5cc', ring1: '#9c4331', ring2: '#c98e4b', accent: '#59301e' });
   root.add(mesh(new T.CylinderGeometry(1.76, 1.80, 0.022, 64), new T.MeshStandardMaterial({ map: rugTex, roughness: 0.90 }), {
-    pos: [0, FLOOR_Y + 0.009, 0],
-    receive: true,
+    pos: [0, FLOOR_Y + 0.009, 0], receive: true,
   }));
-  root.add(mesh(new T.TorusGeometry(1.77, 0.012, 8, 64), copper, {
-    pos: [0, FLOOR_Y + 0.015, 0],
-    rot: [Math.PI / 2, 0, 0],
-  }));
+  root.add(mesh(new T.TorusGeometry(1.77, 0.013, 8, 64), copper, { pos: [0, FLOOR_Y + 0.015, 0], rot: [Math.PI / 2, 0, 0] }));
   root.add(createContactShadow(1.38));
 
-  // 3. Terracotta plaster walls + cream wainscoting + arched ceiling beams
+  // 3. Seamless terracotta limewash walls + cream raised-panel wainscoting + Parisian boiserie frames on ALL 4 walls!
   const wallMat = new T.MeshStandardMaterial({
-    map: wallPlaster.map,
-    bumpMap: wallPlaster.bumpMap,
-    bumpScale: 0.016,
-    roughness: 0.84,
-    envMapIntensity: 0.72,
+    map: wallPlaster.map, bumpMap: wallPlaster.bumpMap, bumpScale: 0.016, roughness: 0.84, envMapIntensity: 0.72,
   });
   const wallZ = -R;
-  // Back wall with shopfront window opening on the left (x in [-4.0, -1.2], y in [1.22, 4.24])
   root.add(mesh(new T.BoxGeometry(R * 2, 1.03, 0.18), wallMat, { pos: [0, FLOOR_Y + 0.515, wallZ] }));
-  root.add(mesh(new T.BoxGeometry(R * 2, 1.15, 0.18), wallMat, { pos: [0, 4.24 + 0.575, wallZ] }));
-  root.add(mesh(new T.BoxGeometry(1.95, 3.02, 0.18), wallMat, { pos: [-4.975, 2.73, wallZ] }));
-  root.add(mesh(new T.BoxGeometry(7.15, 3.02, 0.18), wallMat, { pos: [2.375, 2.73, wallZ] }));
+  root.add(mesh(new T.BoxGeometry(R * 2, 1.18, 0.18), wallMat, { pos: [0, 4.24 + 0.59, wallZ] }));
+  root.add(mesh(new T.BoxGeometry(1.75, 3.02, 0.18), wallMat, { pos: [-5.075, 2.73, wallZ] }));
+  root.add(mesh(new T.BoxGeometry(7.35, 3.02, 0.18), wallMat, { pos: [2.275, 2.73, wallZ] }));
 
   root.add(mesh(new T.BoxGeometry(R * 2, H, 0.18), wallMat, { pos: [0, FLOOR_Y + H / 2, R] }));
   root.add(mesh(new T.BoxGeometry(0.18, H, R * 2), wallMat, { pos: [-R, FLOOR_Y + H / 2, 0] }));
   root.add(mesh(new T.BoxGeometry(0.18, H, R * 2), wallMat, { pos: [R, FLOOR_Y + H / 2, 0] }));
 
-  // Cream panelled wainscoting & crown trim around all 4 walls
   for (let side = 0; side < 4; side++) {
     const wg = new T.Group();
     wg.rotation.y = (side * Math.PI) / 2;
     const z = -R + 0.10;
-    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.94, 0.06), creamTrim, { pos: [0, FLOOR_Y + 0.47, z] }));
-    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.07, 0.10), honeyOak, { pos: [0, FLOOR_Y + 0.96, z + 0.02] }));
-    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.14, 0.09), cocoaWood, { pos: [0, FLOOR_Y + 0.07, z + 0.015] }));
-    wg.add(mesh(new T.BoxGeometry(R * 2, 0.18, 0.16), creamTrim, { pos: [0, FLOOR_Y + H - 0.09, z + 0.04] }));
-    wg.add(mesh(new T.BoxGeometry(0.24, H, 0.24), creamTrim, { pos: [-R + 0.12, FLOOR_Y + H / 2, -R + 0.12] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.96, 0.06), creamTrim, { pos: [0, FLOOR_Y + 0.48, z] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.075, 0.12), honeyOak, { pos: [0, FLOOR_Y + 0.98, z + 0.025] }));
+    wg.add(mesh(new T.BoxGeometry(R * 2 - 0.1, 0.15, 0.10), cocoaWood, { pos: [0, FLOOR_Y + 0.075, z + 0.02] }));
+    for (let x = -5.0; x <= 5.0; x += 1.25) {
+      addBoiserieFrame(wg, x, FLOOR_Y + 0.52, z + 0.04, 0.96, 0.60, honeyOak);
+    }
+    wg.add(mesh(new T.BoxGeometry(R * 2, 0.20, 0.18), creamTrim, { pos: [0, FLOOR_Y + H - 0.10, z + 0.04] }));
+    wg.add(mesh(new T.BoxGeometry(0.26, H, 0.26), creamTrim, { pos: [-R + 0.13, FLOOR_Y + H / 2, -R + 0.13] }));
+    if (side !== 0) {
+      for (const bx of [-3.6, 3.6]) addBoiserieFrame(wg, bx, 3.10, z + 0.015, 2.25, 2.48, creamTrim);
+    }
     root.add(wg);
   }
 
-  // Coffered warm cream ceiling with honey-oak beams + suspended brass opal pendant globes
-  root.add(mesh(new T.PlaneGeometry(R * 2.1, R * 2.1), creamTrim, {
-    pos: [0, FLOOR_Y + H, 0],
-    rot: [Math.PI / 2, 0, 0],
-  }));
+  // Coffered cream ceiling + wood-grained honey-oak beams + milk-glass brass pendant globes
+  root.add(mesh(new T.PlaneGeometry(R * 2.1, R * 2.1), creamTrim, { pos: [0, FLOOR_Y + H, 0], rot: [Math.PI / 2, 0, 0] }));
   for (let x = -3.8; x <= 3.8; x += 1.9) {
-    root.add(mesh(new T.BoxGeometry(0.16, 0.20, R * 2), honeyOak, { pos: [x, FLOOR_Y + H - 0.10, 0] }));
+    root.add(mesh(new T.BoxGeometry(0.18, 0.22, R * 2), honeyOak, { pos: [x, FLOOR_Y + H - 0.11, 0] }));
   }
   for (const [px, pz] of [[-2.4, -2.2], [2.4, -2.2], [-2.4, 2.2], [2.4, 2.2]]) {
     root.add(mesh(new T.CylinderGeometry(0.012, 0.012, 0.9, 8), brass, { pos: [px, FLOOR_Y + H - 0.45, pz] }));
-    root.add(mesh(new T.SphereGeometry(0.14, 16, 12), globeLightMat, { pos: [px, FLOOR_Y + H - 0.95, pz], receive: false }));
-    addGlow(root, px, FLOOR_Y + H - 0.95, pz, 0xffd594, 0.85, 0.45);
+    root.add(mesh(new T.SphereGeometry(0.145, 16, 12), globeLightMat, { pos: [px, FLOOR_Y + H - 0.95, pz], receive: false }));
+    addGlow(root, px, FLOOR_Y + H - 0.95, pz, 0xffd594, 0.92, 0.48);
   }
 
-  // 4. HERO BACK-LEFT: Frosted Patisserie Shopfront Window with Glowing Paper Star Lanterns
+  // 4. HERO BACK-LEFT: Parisian Patisserie Shopfront Window + Painterly Dusk Street + Moravian Stars + Lit Garland
   const swGroup = new T.Group();
-  const swX = -2.6;
-  const swW = 2.8;
-  const swH = 3.02;
+  const swX = -2.80, swW = 2.80, swH = 3.02;
   swGroup.position.set(swX, 2.73, wallZ);
-  // Cream shopfront framing
-  swGroup.add(mesh(new T.BoxGeometry(swW + 0.24, 0.15, 0.30), creamTrim, { pos: [0, -swH / 2 - 0.04, 0.07] }));
-  swGroup.add(mesh(new T.BoxGeometry(swW + 0.24, 0.16, 0.30), creamTrim, { pos: [0, swH / 2 + 0.04, 0.07] }));
-  for (const sx of [-1, 1]) {
-    swGroup.add(mesh(new T.BoxGeometry(0.14, swH + 0.2, 0.28), creamTrim, { pos: [sx * (swW / 2 + 0.05), 0, 0.06] }));
-  }
+  swGroup.add(mesh(new T.BoxGeometry(swW + 0.28, 0.16, 0.34), creamTrim, { pos: [0, -swH / 2 - 0.04, 0.08] }));
+  swGroup.add(mesh(new T.BoxGeometry(swW + 0.38, 0.07, 0.44), honeyOak, { pos: [0, -swH / 2 - 0.10, 0.14] }));
+  swGroup.add(mesh(new T.BoxGeometry(swW + 0.34, 0.18, 0.32), creamTrim, { pos: [0, swH / 2 + 0.05, 0.08] }));
+  for (const sx of [-1, 1]) swGroup.add(mesh(new T.BoxGeometry(0.16, swH + 0.22, 0.30), creamTrim, { pos: [sx * (swW / 2 + 0.06), 0, 0.06] }));
   swGroup.add(mesh(new T.BoxGeometry(0.05, swH, 0.08), creamTrim, { pos: [0, 0, 0.02] }));
   swGroup.add(mesh(new T.BoxGeometry(swW, 0.05, 0.08), creamTrim, { pos: [0, 0.28, 0.02] }));
 
-  // Winter dusk street backdrop behind the shopfront
-  const duskMat = new T.ShaderMaterial({
-    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader: `
-      varying vec2 vUv;
-      void main() {
-        vec3 top = vec3(0.07, 0.13, 0.26);
-        vec3 bot = vec3(0.24, 0.31, 0.46);
-        gl_FragColor = vec4(mix(bot, top, vUv.y), 1.0);
-      }
-    `,
-  });
-  swGroup.add(mesh(new T.PlaneGeometry(5.2, 4.8), duskMat, { pos: [0, 0.1, -2.0], receive: false }));
-  // Glowing Moravian paper star lanterns suspended inside the shopfront!
-  const starLanternMat = new T.MeshStandardMaterial({
-    color: 0xfff2d6,
-    emissive: 0xffc66e,
-    emissiveIntensity: 1.55,
-    roughness: 0.4,
-  });
-  const stars = [[-0.68, 0.72, 0.18, 0.22], [0.06, 0.96, 0.16, 0.18], [0.74, 0.60, 0.20, 0.20]];
-  for (const [sx, sy, sz, sr] of stars) {
-    swGroup.add(mesh(new T.CylinderGeometry(0.006, 0.006, 1.5 - sy, 6), brass, { pos: [sx, (1.5 + sy) / 2, sz] }));
+  // Painterly snowy dusk street vista behind the shopfront
+  swGroup.add(mesh(new T.PlaneGeometry(5.6, 3.8), new T.MeshBasicMaterial({ map: alpineVistaTexture('bakery') }), {
+    pos: [0, 0.06, -1.6], receive: false,
+  }));
+  const starLanternMat = new T.MeshStandardMaterial({ color: 0xfff4da, emissive: 0xffc872, emissiveIntensity: 1.65, roughness: 0.35 });
+  for (const [sx, sy, sz, sr] of [[-0.72, 0.72, 0.18, 0.22], [0.06, 0.96, 0.16, 0.19], [0.76, 0.62, 0.20, 0.20]]) {
+    swGroup.add(mesh(new T.CylinderGeometry(0.006, 0.006, 1.52 - sy, 6), brass, { pos: [sx, (1.52 + sy) / 2, sz] }));
     const lantern = new T.Group();
     lantern.position.set(sx, sy, sz);
     lantern.add(mesh(new T.OctahedronGeometry(sr, 0), starLanternMat, { receive: false }));
     lantern.add(mesh(new T.OctahedronGeometry(sr * 0.92, 0), starLanternMat, { rot: [Math.PI / 4, Math.PI / 4, 0], receive: false }));
-    addGlow(lantern, 0, 0, 0, 0xffd284, sr * 4.5, 0.55);
+    addGlow(lantern, 0, 0, 0, 0xffd284, sr * 4.8, 0.58);
     swGroup.add(lantern);
   }
+  const swGarland = createPineGarland(swW + 0.40, 0.18, evergreen, berry, true);
+  swGarland.position.set(0, swH / 2 + 0.14, 0.24);
+  swGroup.add(swGarland);
   swGroup.add(mesh(new T.PlaneGeometry(swW - 0.06, swH - 0.06), glassMat, { pos: [0, 0, 0.01], receive: false }));
   root.add(swGroup);
 
   const bakerySnow = createParticleField({
-    count: 85,
-    bounds: [swX - 1.5, swX + 1.5, 1.25, 4.3, wallZ - 1.6, wallZ - 0.25],
-    color: 0xe3f0ff,
-    size: 12,
-    speedY: -0.38,
-    sway: 0.12,
-    opacity: 0.78,
-    seed: 991,
+    count: 95, bounds: [swX - 1.5, swX + 1.5, 1.25, 4.3, wallZ - 1.45, wallZ - 0.18],
+    color: 0xe3f0ff, size: 12, speedY: -0.38, sway: 0.12, opacity: 0.80, seed: 991,
   });
   root.add(bakerySnow.object);
   animators.push(t => bakerySnow.update(t));
 
-  // 5. HERO BACK-RIGHT: Sculpted Arched Brick Patisserie Oven + Copper Hood + Marble Prep Counter
+  // 5. HERO BACK-RIGHT: Sculpted Kiln-Brick Arched Patisserie Oven + Copper Hood + Marble Cake Counter
   const ovenGroup = new T.Group();
-  ovenGroup.position.set(2.45, FLOOR_Y, wallZ + 0.45);
-  const brickMat = new T.MeshStandardMaterial({ color: 0x7a3425, roughness: 0.86 });
-  // Marble counter base
-  ovenGroup.add(mesh(new T.BoxGeometry(2.45, 0.98, 0.92), creamTrim, { pos: [0, 0.49, 0.06] }));
-  ovenGroup.add(mesh(new T.BoxGeometry(2.54, 0.08, 0.98), marble, { pos: [0, 1.02, 0.08] }));
-  // Brick oven dome housing
-  ovenGroup.add(mesh(new T.BoxGeometry(2.12, 1.38, 0.82), brickMat, { pos: [0, 1.72, -0.02] }));
-  // Glowing recessed arched oven mouth
-  const ovenGlowMat = new T.MeshBasicMaterial({ color: 0xff8f34 });
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.46, 0.46, 0.16, 20, 1, false, 0, Math.PI), ovenGlowMat, {
-    pos: [0, 1.46, 0.36],
-    rot: [0, 0, Math.PI / 2],
-    scale: [0.9, 1, 1],
-    receive: false,
-  }));
-  ovenGroup.add(mesh(new T.PlaneGeometry(0.92, 0.44), ovenGlowMat, { pos: [0, 1.28, 0.41], receive: false }));
-  const ovenHalo = addGlow(ovenGroup, 0, 1.44, 0.52, 0xff9438, 1.45, 0.55);
+  ovenGroup.position.set(2.80, FLOOR_Y, wallZ + 0.46);
+  const brickMat = new T.MeshStandardMaterial({ map: bricks.map, bumpMap: bricks.bumpMap, bumpScale: 0.024, roughness: 0.84 });
 
-  // Sculpted brushed-copper range hood tapering to ceiling
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.42, 1.18, 1.18, 4), copper, {
-    pos: [0, 2.98, 0.05],
-    rot: [0, Math.PI / 4, 0],
-  }));
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.32, 0.36, 1.75, 4), copper, {
-    pos: [0, 4.44, 0.05],
-    rot: [0, Math.PI / 4, 0],
-  }));
-  // Brass utensil rail with hanging copper saucepans
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.016, 0.016, 1.85, 8), brass, {
-    pos: [0, 2.44, 0.46],
-    rot: [0, 0, Math.PI / 2],
-  }));
-  for (const px of [-0.62, -0.22, 0.24, 0.62]) {
-    ovenGroup.add(mesh(new T.CylinderGeometry(0.11, 0.11, 0.035, 16), copper, {
-      pos: [px, 2.18, 0.47],
-      rot: [Math.PI / 2, 0, 0],
+  // Cream panelled base cabinetry + thick veined marble counter
+  ovenGroup.add(mesh(new T.BoxGeometry(2.62, 0.98, 0.98), creamTrim, { pos: [0, 0.49, 0.06] }));
+  for (const bx of [-0.78, 0.78]) addBoiserieFrame(ovenGroup, bx, 0.49, 0.56, 0.86, 0.68, honeyOak);
+  ovenGroup.add(mesh(new T.BoxGeometry(2.74, 0.085, 1.06), marble, { pos: [0, 1.02, 0.08] }));
+
+  // Textured kiln-fired brick oven body + stone voussoir arch surround!
+  ovenGroup.add(mesh(new T.BoxGeometry(2.26, 1.42, 0.86), brickMat, { pos: [0, 1.75, -0.02] }));
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 8) * Math.PI;
+    ovenGroup.add(mesh(new T.BoxGeometry(0.15, 0.20, 0.14), creamTrim, {
+      pos: [Math.cos(a) * 0.54, 1.48 + Math.sin(a) * 0.44, 0.40], rot: [0, 0, a - Math.PI / 2],
     }));
   }
-  // Stylized iced holiday cake on marble counter
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.22, 0.24, 0.03, 18), brass, { pos: [-0.82, 1.12, 0.28] }));
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.17, 0.18, 0.16, 18), new T.MeshStandardMaterial({ color: 0x693a24, roughness: 0.72 }), {
-    pos: [-0.82, 1.22, 0.28],
-  }));
-  ovenGroup.add(mesh(new T.CylinderGeometry(0.175, 0.175, 0.04, 18), creamTrim, { pos: [-0.82, 1.31, 0.28] }));
+  // Deep recessed glowing oven baking chamber + warm baked golden loaves inside!
+  ovenGroup.add(mesh(new T.BoxGeometry(0.96, 0.64, 0.20), new T.MeshStandardMaterial({ color: 0x2a1008, roughness: 0.9 }), { pos: [0, 1.38, 0.34] }));
+  ovenGroup.add(mesh(new T.PlaneGeometry(0.88, 0.52), new T.MeshBasicMaterial({ color: 0xff8a2c }), { pos: [0, 1.36, 0.42], receive: false }));
+  for (const lx of [-0.22, 0.20]) {
+    ovenGroup.add(mesh(new T.SphereGeometry(0.12, 12, 8), new T.MeshStandardMaterial({ color: 0xc27732, roughness: 0.72 }), {
+      pos: [lx, 1.15, 0.42], scale: [1.3, 0.65, 0.9],
+    }));
+  }
+  const ovenHalo = addGlow(ovenGroup, 0, 1.44, 0.54, 0xff9438, 1.55, 0.58);
 
-  const ovenLight = new T.PointLight(0xff8f3d, 3.3, 8.2, 1.55);
-  ovenLight.position.set(2.45, 1.65, wallZ + 1.15);
+  // Riveted brushed-copper range hood + brass rim + hanging copper pots
+  ovenGroup.add(mesh(new T.CylinderGeometry(0.42, 1.24, 1.18, 4), copper, { pos: [0, 3.04, 0.05], rot: [0, Math.PI / 4, 0] }));
+  ovenGroup.add(mesh(new T.BoxGeometry(1.78, 0.08, 1.78), brass, { pos: [0, 2.48, 0.05] }));
+  ovenGroup.add(mesh(new T.CylinderGeometry(0.32, 0.36, 1.78, 4), copper, { pos: [0, 4.48, 0.05], rot: [0, Math.PI / 4, 0] }));
+  ovenGroup.add(mesh(new T.CylinderGeometry(0.016, 0.016, 1.88, 8), brass, { pos: [0, 2.44, 0.52], rot: [0, 0, Math.PI / 2] }));
+  for (const px of [-0.62, -0.22, 0.24, 0.62]) {
+    ovenGroup.add(mesh(new T.CylinderGeometry(0.11, 0.11, 0.036, 16), copper, { pos: [px, 2.16, 0.53], rot: [Math.PI / 2, 0, 0] }));
+    ovenGroup.add(mesh(new T.CylinderGeometry(0.012, 0.012, 0.16, 6), brass, { pos: [px, 2.34, 0.53] }));
+  }
+  // 2-tier holiday cake under a glass cloche on the marble counter!
+  ovenGroup.add(mesh(new T.CylinderGeometry(0.24, 0.26, 0.03, 18), brass, { pos: [-0.88, 1.10, 0.30] }));
+  ovenGroup.add(mesh(new T.CylinderGeometry(0.18, 0.19, 0.16, 18), new T.MeshStandardMaterial({ color: 0x6b3b24, roughness: 0.7 }), { pos: [-0.88, 1.20, 0.30] }));
+  ovenGroup.add(mesh(new T.CylinderGeometry(0.185, 0.185, 0.04, 18), creamTrim, { pos: [-0.88, 1.29, 0.30] }));
+  ovenGroup.add(mesh(new T.SphereGeometry(0.23, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), glassMat, { pos: [-0.88, 1.12, 0.30], scale: [1, 1.3, 1], receive: false }));
+
+  const ovenLight = new T.PointLight(0xff903d, 3.6, 8.8, 1.5);
+  ovenLight.position.set(2.80, 1.68, wallZ + 1.22);
   root.add(ovenLight, ovenGroup);
-
   animators.push(t => {
     const glow = 0.92 + 0.08 * Math.sin(t * 5.6) + 0.04 * Math.cos(t * 11.2);
-    ovenLight.intensity = 3.2 * glow;
-    ovenHalo.material.opacity = 0.50 * glow;
+    ovenLight.intensity = 3.5 * glow;
+    ovenHalo.material.opacity = 0.54 * glow;
   });
 
-  // 6. RIGHT WALL (+X): Artisan Patisserie Display Showcase & Shelving
+  // 6. RIGHT WALL (+X): Artisan Patisserie Display Showcase & Lit Shelving
   const shelfGroup = new T.Group();
   shelfGroup.position.set(R - 0.48, FLOOR_Y, 0);
   shelfGroup.rotation.y = -Math.PI / 2;
-  // Base counter + marble top
-  shelfGroup.add(mesh(new T.BoxGeometry(3.3, 0.96, 0.68), honeyOak, { pos: [0, 0.48, 0] }));
-  shelfGroup.add(mesh(new T.BoxGeometry(3.42, 0.08, 0.76), marble, { pos: [0, 1.0, 0.02] }));
-  // Glass display case on counter + brass corner posts
-  shelfGroup.add(mesh(new T.BoxGeometry(1.75, 0.68, 0.56), glassMat, { pos: [-0.62, 1.38, 0.04], receive: false }));
-  for (const cx of [-1.48, 0.24]) {
-    for (const cz of [-0.22, 0.30]) {
-      shelfGroup.add(mesh(new T.CylinderGeometry(0.015, 0.015, 0.70, 8), brass, { pos: [cx, 1.38, cz] }));
-    }
+  shelfGroup.add(mesh(new T.BoxGeometry(3.5, 0.96, 0.72), honeyOak, { pos: [0, 0.48, 0] }));
+  shelfGroup.add(mesh(new T.BoxGeometry(3.64, 0.08, 0.80), marble, { pos: [0, 1.0, 0.02] }));
+  shelfGroup.add(mesh(new T.BoxGeometry(1.85, 0.70, 0.58), glassMat, { pos: [-0.62, 1.39, 0.04], receive: false }));
+  for (const cx of [-1.52, 0.28]) {
+    for (const cz of [-0.23, 0.31]) shelfGroup.add(mesh(new T.CylinderGeometry(0.015, 0.015, 0.72, 8), brass, { pos: [cx, 1.39, cz] }));
   }
-  // Tiered pastries inside the glass case
   const pastryColors = [0xf4d5c6, 0xb83b3b, 0xe8ba68, 0x5c3422];
   for (let i = 0; i < 4; i++) {
-    shelfGroup.add(mesh(new T.CylinderGeometry(0.14, 0.15, 0.14, 14), new T.MeshStandardMaterial({ color: pastryColors[i], roughness: 0.55 }), {
-      pos: [-1.20 + i * 0.40, 1.12, 0.06],
+    shelfGroup.add(mesh(new T.CylinderGeometry(0.14, 0.15, 0.14, 14), new T.MeshStandardMaterial({ color: pastryColors[i], roughness: 0.52 }), {
+      pos: [-1.24 + i * 0.41, 1.12, 0.06],
     }));
   }
-  // Upper floating honey-oak shelves with glass cookie jars & striped gift boxes
-  for (const sy of [2.15, 2.95]) {
-    shelfGroup.add(mesh(new T.BoxGeometry(3.2, 0.08, 0.44), honeyOak, { pos: [0, sy, -0.10] }));
+  for (const sy of [2.15, 2.98]) {
+    shelfGroup.add(mesh(new T.BoxGeometry(3.4, 0.085, 0.46), honeyOak, { pos: [0, sy, -0.10] }));
+    addLightWash(shelfGroup, 0, sy + 0.36, -0.28, 3.0, 0.78, 0xffd188, 0.30);
     for (let j = -2; j <= 2; j++) {
       if (j % 2 === 0) {
-        // Glass cookie jar
-        shelfGroup.add(mesh(new T.CylinderGeometry(0.11, 0.11, 0.26, 14), glassMat, { pos: [j * 0.56, sy + 0.18, -0.08], receive: false }));
-        shelfGroup.add(mesh(new T.CylinderGeometry(0.09, 0.09, 0.16, 12), new T.MeshStandardMaterial({ color: 0x9c5b2e, roughness: 0.8 }), {
-          pos: [j * 0.56, sy + 0.13, -0.08],
-        }));
-        shelfGroup.add(mesh(new T.SphereGeometry(0.04, 10, 8), brass, { pos: [j * 0.56, sy + 0.33, -0.08] }));
+        shelfGroup.add(mesh(new T.CylinderGeometry(0.11, 0.11, 0.26, 14), glassMat, { pos: [j * 0.58, sy + 0.18, -0.08], receive: false }));
+        shelfGroup.add(mesh(new T.CylinderGeometry(0.09, 0.09, 0.16, 12), new T.MeshStandardMaterial({ color: 0x9c5b2e, roughness: 0.8 }), { pos: [j * 0.58, sy + 0.13, -0.08] }));
+        shelfGroup.add(mesh(new T.SphereGeometry(0.04, 10, 8), brass, { pos: [j * 0.58, sy + 0.33, -0.08] }));
       } else {
-        // Striped bakery box
-        shelfGroup.add(mesh(new T.BoxGeometry(0.32, 0.22, 0.26), creamTrim, { pos: [j * 0.56, sy + 0.15, -0.08] }));
-        shelfGroup.add(mesh(new T.BoxGeometry(0.34, 0.05, 0.28), velvet, { pos: [j * 0.56, sy + 0.26, -0.08] }));
+        shelfGroup.add(mesh(new T.BoxGeometry(0.32, 0.22, 0.26), creamTrim, { pos: [j * 0.58, sy + 0.15, -0.08] }));
+        shelfGroup.add(mesh(new T.BoxGeometry(0.34, 0.05, 0.28), velvet, { pos: [j * 0.58, sy + 0.26, -0.08] }));
       }
     }
   }
+  const bsR1 = createWallSconce(brass, globeLightMat, 0xffcc7e); bsR1.position.set(-2.55, 2.72, -0.30);
+  const bsR2 = createWallSconce(brass, globeLightMat, 0xffcc7e); bsR2.position.set(2.55, 2.72, -0.30);
+  shelfGroup.add(bsR1, bsR2);
   root.add(shelfGroup);
 
-  // 7. LEFT WALL (-X): Parisian Marble Bistro Table & Bentwood Chairs
+  // 7. LEFT WALL (-X): Marble Café Bistro Table + Bentwood Chairs + Vintage Patisserie Chalkboard Menu + Sconces
   const cafeGroup = new T.Group();
-  cafeGroup.position.set(-R + 0.92, FLOOR_Y, 0.35);
+  cafeGroup.position.set(-R + 0.92, FLOOR_Y, 0.2);
   cafeGroup.rotation.y = Math.PI / 2;
-  // Round marble bistro table
-  cafeGroup.add(mesh(new T.CylinderGeometry(0.56, 0.56, 0.045, 28), marble, { pos: [0, 0.84, 0] }));
+  cafeGroup.add(mesh(new T.CylinderGeometry(0.58, 0.58, 0.048, 28), marble, { pos: [0, 0.84, 0] }));
   cafeGroup.add(mesh(new T.CylinderGeometry(0.04, 0.06, 0.82, 12), brass, { pos: [0, 0.42, 0] }));
   cafeGroup.add(mesh(new T.CylinderGeometry(0.28, 0.32, 0.04, 20), brass, { pos: [0, 0.02, 0] }));
-  const tableCandle = createCandle(0.16, 0.028, brass, creamTrim, new T.MeshBasicMaterial({ color: 0xffd584 }));
+  const tableCandle = createCandle(0.17, 0.028, brass, creamTrim, new T.MeshBasicMaterial({ color: 0xffd584 }));
   tableCandle.group.position.set(0.06, 0.86, 0);
   cafeGroup.add(tableCandle.group);
-  // Two stylized bistro chairs
-  for (const cx of [-0.74, 0.74]) {
+  for (const cx of [-0.76, 0.76]) {
     const ch = new T.Group();
     ch.position.set(cx, 0, 0);
     ch.rotation.y = cx < 0 ? 0.28 : -0.28;
@@ -1514,41 +1251,51 @@ function buildBakeryWorld() {
     for (const [lx, lz] of [[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]]) {
       ch.add(mesh(new T.CylinderGeometry(0.018, 0.016, 0.50, 8), cocoaWood, { pos: [lx, 0.25, lz] }));
     }
-    ch.add(mesh(new T.TorusGeometry(0.22, 0.02, 8, 20, Math.PI), cocoaWood, {
-      pos: [cx < 0 ? -0.20 : 0.20, 0.84, 0],
-      rot: [0, Math.PI / 2, 0],
-    }));
+    ch.add(mesh(new T.TorusGeometry(0.22, 0.02, 8, 20, Math.PI), cocoaWood, { pos: [cx < 0 ? -0.20 : 0.20, 0.84, 0], rot: [0, Math.PI / 2, 0] }));
     cafeGroup.add(ch);
   }
+  // Vintage gold-framed French patisserie chalkboard menu on the left wall!
+  const menuMat = new T.MeshStandardMaterial({
+    map: signTexture('Pâtisserie de Noël', 'Gingerbread · Stollen · Spiced Cocoa', { bg: '#201918', border: '#e0b464', fg: '#f8ebd2' }),
+    roughness: 0.72,
+  });
+  cafeGroup.add(mesh(new T.BoxGeometry(1.76, 0.96, 0.06), brass, { pos: [0, 2.86, -0.74] }));
+  cafeGroup.add(mesh(new T.PlaneGeometry(1.62, 0.82), menuMat, { pos: [0, 2.86, -0.70] }));
+  const bsL1 = createWallSconce(brass, globeLightMat, 0xffcc7e); bsL1.position.set(-2.35, 2.72, -0.75);
+  const bsL2 = createWallSconce(brass, globeLightMat, 0xffcc7e); bsL2.position.set(2.35, 2.72, -0.75);
+  cafeGroup.add(bsL1, bsL2);
   root.add(cafeGroup);
 
-  // 8. FRONT WALL (+Z, behind camera): Cream & Brass Patisserie Entrance Door + Wreath
+  // 8. FRONT WALL (+Z, behind camera): Cream & Glass Patisserie Double Entrance Door + Wreath + Sconces
   const doorGroup = new T.Group();
   doorGroup.position.set(0, FLOOR_Y, R - 0.18);
   doorGroup.rotation.y = Math.PI;
-  doorGroup.add(mesh(new T.BoxGeometry(2.12, 3.34, 0.14), creamTrim, { pos: [0, 1.67, 0] }));
-  doorGroup.add(mesh(new T.BoxGeometry(2.30, 0.14, 0.22), honeyOak, { pos: [0, 3.38, 0.02] }));
+  doorGroup.add(mesh(new T.BoxGeometry(2.18, 3.40, 0.16), creamTrim, { pos: [0, 1.70, 0] }));
+  doorGroup.add(mesh(new T.BoxGeometry(2.40, 0.16, 0.24), honeyOak, { pos: [0, 3.44, 0.02] }));
   for (const dx of [-0.48, 0.48]) {
-    doorGroup.add(mesh(new T.BoxGeometry(0.72, 1.55, 0.05), new T.MeshStandardMaterial({ color: 0x22324d, roughness: 0.25, metalness: 0.15 }), {
-      pos: [dx, 2.28, 0.07],
+    doorGroup.add(mesh(new T.BoxGeometry(0.74, 1.58, 0.05), new T.MeshStandardMaterial({ map: alpineVistaTexture('bakery'), roughness: 0.25 }), {
+      pos: [dx, 2.28, 0.08],
     }));
-    doorGroup.add(mesh(new T.CylinderGeometry(0.018, 0.018, 0.42, 8), brass, { pos: [dx > 0 ? 0.12 : -0.12, 1.44, 0.14] }));
+    doorGroup.add(mesh(new T.CylinderGeometry(0.018, 0.018, 0.42, 8), brass, { pos: [dx > 0 ? 0.12 : -0.12, 1.44, 0.15] }));
   }
-  const bWreath = createWreath(0.42, evergreen, berry, velvet);
-  bWreath.position.set(0, 2.38, 0.14);
+  const bWreath = createWreath(0.45, evergreen, berry, velvet);
+  bWreath.position.set(0, 2.40, 0.16);
   doorGroup.add(bWreath);
+  for (const sx of [-1.95, 1.95]) {
+    const sc = createWallSconce(brass, globeLightMat, 0xffcc7e);
+    sc.position.set(sx, 2.72, 0.06);
+    doorGroup.add(sc);
+  }
   root.add(doorGroup);
 
-  // 9. Warm golden rising sugar/spice dust motes
+  // Warm side & back wall point lights so 360° orbit feels warmly enveloped
+  const bakeryLeftLight = new T.PointLight(0xffc982, 2.3, 7.6, 1.45); bakeryLeftLight.position.set(-R + 1.35, 2.55, 0);
+  const bakeryBackLight = new T.PointLight(0xffc982, 2.0, 7.6, 1.45); bakeryBackLight.position.set(0, 2.85, R - 1.35);
+  root.add(bakeryLeftLight, bakeryBackLight);
+
   const motes = createParticleField({
-    count: 60,
-    bounds: [-3.2, 3.2, 0.5, 4.3, -3.2, 3.2],
-    color: 0xffd996,
-    size: 9,
-    speedY: 0.08,
-    sway: 0.22,
-    opacity: 0.46,
-    seed: 707,
+    count: 65, bounds: [-3.4, 3.4, 0.5, 4.3, -3.4, 3.4],
+    color: 0xffdc9a, size: 9, speedY: 0.08, sway: 0.22, opacity: 0.46, seed: 707,
   });
   root.add(motes.object);
   animators.push(t => motes.update(t));
@@ -1556,25 +1303,15 @@ function buildBakeryWorld() {
   return {
     group: root,
     background: new T.Color(0x28130e),
-    fog: new T.FogExp2(0x2d1610, 0.024),
+    fog: new T.FogExp2(0x2d1610, 0.021),
     lighting: {
-      hemiSky: 0xfff0d9,
-      hemiGround: 0x5c3020,
-      hemiIntensity: 0.82,
-      keyColor: 0xffe8c4,
-      keyIntensity: 1.72,
-      keyPos: [-2.5, 5.2, 3.8],
-      rimColor: 0xa4c9ff,
-      rimIntensity: 0.92,
-      rimPos: [-3.2, 3.0, -3.8],
-      fillColor: 0xffaa5e,
-      fillIntensity: 0.68,
-      fillPos: [3.2, 2.4, -2.5],
-      exposure: 1.08,
+      hemiSky: 0xfff0d9, hemiGround: 0x5c3020, hemiIntensity: 0.85,
+      keyColor: 0xffe8c4, keyIntensity: 1.75, keyPos: [-2.5, 5.2, 3.8],
+      rimColor: 0xa4c9ff, rimIntensity: 0.96, rimPos: [-3.2, 3.0, -3.8],
+      fillColor: 0xffaa5e, fillIntensity: 0.72, fillPos: [3.2, 2.4, -2.5],
+      exposure: 1.09,
     },
-    update(t) {
-      for (const fn of animators) fn(t);
-    },
+    update(t) { for (const fn of animators) fn(t); },
   };
 }
 

@@ -351,6 +351,454 @@ export function plazaPlinthTexture() {
 }
 
 /**
+ * Rich grained wood PBR textures (smoked walnut / honey oak / chalet timber)
+ * so beams, wainscoting, cabinetry, and chalets never look like flat plastic!
+ */
+export function woodTextures(key = 'walnut', { base = [74, 46, 29], grain = [32, 18, 10], hi = [122, 82, 52], repeatX = 2, repeatY = 2 } = {}) {
+  return memo(`wood:${key}:${repeatX}:${repeatY}`, () => {
+    const size = 512;
+    const [cColor, ctxC] = makeCanvas(size, size);
+    const [cBump, ctxB] = makeCanvas(size, size);
+    const rand = mulberry32(key.split('').reduce((s, ch) => s * 37 + ch.charCodeAt(0), 53));
+
+    ctxC.fillStyle = `rgb(${base[0]},${base[1]},${base[2]})`;
+    ctxC.fillRect(0, 0, size, size);
+    ctxB.fillStyle = '#808080';
+    ctxB.fillRect(0, 0, size, size);
+
+    // Seamless longitudinal plank variation + natural grain fibers
+    const bands = 8;
+    const bh = size / bands;
+    for (let b = 0; b < bands; b++) {
+      const y0 = b * bh;
+      const shift = (rand() - 0.5) * 14;
+      ctxC.fillStyle = `rgb(${Math.max(15, base[0] + shift) | 0},${Math.max(10, base[1] + shift * 0.75) | 0},${Math.max(8, base[2] + shift * 0.55) | 0})`;
+      ctxC.fillRect(0, y0, size, bh);
+
+      // Subtle plank seam groove
+      ctxC.fillStyle = `rgba(${grain[0]},${grain[1]},${grain[2]},0.35)`;
+      ctxC.fillRect(0, y0, size, 1.5);
+      ctxB.fillStyle = '#404040';
+      ctxB.fillRect(0, y0, size, 2);
+
+      // Fine organic grain streams
+      for (let g = 0; g < 18; g++) {
+        const gy = y0 + 2 + rand() * (bh - 4);
+        const dark = rand() > 0.35;
+        const col = dark ? grain : hi;
+        const alpha = dark ? 0.14 + rand() * 0.14 : 0.08 + rand() * 0.10;
+        ctxC.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${alpha})`;
+        ctxC.lineWidth = 0.8 + rand() * 1.6;
+        ctxC.beginPath();
+        ctxC.moveTo(0, gy);
+        ctxC.bezierCurveTo(size * 0.33, gy + (rand() - 0.5) * 4, size * 0.66, gy + (rand() - 0.5) * 4, size, gy);
+        ctxC.stroke();
+
+        ctxB.strokeStyle = dark ? 'rgba(90,90,90,0.35)' : 'rgba(175,175,175,0.28)';
+        ctxB.lineWidth = 1;
+        ctxB.beginPath();
+        ctxB.moveTo(0, gy);
+        ctxB.lineTo(size, gy);
+        ctxB.stroke();
+      }
+    }
+
+    return {
+      map: configureTexture(cColor, { repeatX, repeatY, srgb: true }),
+      bumpMap: configureTexture(cBump, { repeatX, repeatY, srgb: false }),
+    };
+  });
+}
+
+/**
+ * Artisan kiln-fired brick masonry PBR texture for the bakery hearth oven.
+ */
+export function brickTextures() {
+  return memo('bakery-brick', () => {
+    const size = 512;
+    const [cColor, ctxC] = makeCanvas(size, size);
+    const [cBump, ctxB] = makeCanvas(size, size);
+    const rand = mulberry32(4821);
+
+    // Warm cream lime mortar
+    ctxC.fillStyle = '#c8b69c';
+    ctxC.fillRect(0, 0, size, size);
+    ctxB.fillStyle = '#383838';
+    ctxB.fillRect(0, 0, size, size);
+
+    const rows = 12;
+    const cols = 6;
+    const rh = size / rows;
+    const cw = size / cols;
+    for (let r = 0; r < rows; r++) {
+      const off = (r % 2) * (cw * 0.5);
+      for (let c = -1; c <= cols; c++) {
+        const x = c * cw + off;
+        const y = r * rh;
+        const R = 132 + (rand() - 0.5) * 34;
+        const G = 64 + (rand() - 0.5) * 20;
+        const B = 45 + (rand() - 0.5) * 14;
+        ctxC.fillStyle = `rgb(${R | 0},${G | 0},${B | 0})`;
+        ctxC.beginPath();
+        ctxC.roundRect(x + 3, y + 3, cw - 6, rh - 6, 3);
+        ctxC.fill();
+
+        // Kiln-char variation
+        ctxC.fillStyle = rand() > 0.5 ? 'rgba(255,210,165,0.08)' : 'rgba(35,12,8,0.14)';
+        ctxC.fillRect(x + 5, y + 5, cw - 10, rh - 10);
+
+        const bv = 165 + rand() * 55;
+        ctxB.fillStyle = `rgb(${bv | 0},${bv | 0},${bv | 0})`;
+        ctxB.beginPath();
+        ctxB.roundRect(x + 3, y + 3, cw - 6, rh - 6, 3);
+        ctxB.fill();
+      }
+    }
+
+    return {
+      map: configureTexture(cColor, { repeatX: 2.2, repeatY: 2.2, srgb: true }),
+      bumpMap: configureTexture(cBump, { repeatX: 2.2, repeatY: 2.2, srgb: false }),
+    };
+  });
+}
+
+/**
+ * Painterly nocturnal Alpine Christmas village vista (for Cabin window, Bakery shopfront,
+ * and full 360° Village Market distant skyline!) — eliminates low-poly cone silhouettes!
+ */
+export function alpineVistaTexture(mode = 'window') {
+  return memo('vista:' + mode, () => {
+    const w = mode === 'panorama' ? 1536 : 1024;
+    const h = 512;
+    const [canvas, ctx] = makeCanvas(w, h);
+    const rand = mulberry32(mode === 'panorama' ? 9921 : mode === 'bakery' ? 7412 : 3318);
+
+    // 1. Deep nocturnal twilight winter sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    if (mode === 'bakery') {
+      sky.addColorStop(0.0, '#0d1930');
+      sky.addColorStop(0.45, '#1d3354');
+      sky.addColorStop(0.76, '#395273');
+      sky.addColorStop(1.0, '#222b3b');
+    } else {
+      sky.addColorStop(0.0, '#071022');
+      sky.addColorStop(0.42, '#132645');
+      sky.addColorStop(0.74, '#274368');
+      sky.addColorStop(1.0, '#182438');
+    }
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2. Soft dreamy winter cloud mist & subtle aurora shimmer
+    for (let i = 0; i < 18; i++) {
+      const cx = rand() * w;
+      const cy = h * (0.14 + rand() * 0.42);
+      const rx = 120 + rand() * 220;
+      const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, rx);
+      g.addColorStop(0, 'rgba(130,178,225,0.09)');
+      g.addColorStop(1, 'rgba(130,178,225,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(cx - rx, cy - rx * 0.5, rx * 2, rx);
+    }
+
+    // 3. Crisp starry winter night
+    for (let i = 0; i < 220; i++) {
+      const sx = rand() * w;
+      const sy = rand() * h * 0.62;
+      const r = 0.6 + rand() * 1.5;
+      ctx.fillStyle = `rgba(242,248,255,${0.35 + rand() * 0.65})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 4. Luminous crescent/full moon with soft atmospheric halo (for window views)
+    if (mode !== 'panorama') {
+      const mx = mode === 'bakery' ? w * 0.72 : w * 0.30;
+      const my = h * 0.24;
+      const mg = ctx.createRadialGradient(mx, my, 8, mx, my, 125);
+      mg.addColorStop(0, 'rgba(255,248,225,0.95)');
+      mg.addColorStop(0.18, 'rgba(255,242,208,0.55)');
+      mg.addColorStop(0.55, 'rgba(140,188,245,0.16)');
+      mg.addColorStop(1, 'rgba(140,188,245,0)');
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.arc(mx, my, 125, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff6dc';
+      ctx.beginPath();
+      ctx.arc(mx, my, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 5. Layered snowy Alpine mountain range (seamless wrap for panorama!)
+    const drawRidge = (baseY, amp, freq, colTop, colBot, phase) => {
+      const grad = ctx.createLinearGradient(0, baseY - amp, 0, h);
+      grad.addColorStop(0, colTop);
+      grad.addColorStop(1, colBot);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 12) {
+        const a = (x / w) * Math.PI * 2;
+        const y = baseY
+          - Math.abs(Math.sin(a * freq + phase)) * amp * 0.72
+          - Math.sin(a * (freq * 2 + 1) + phase * 1.7) * amp * 0.28;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+    };
+    drawRidge(h * 0.70, 92, 3, '#4c6788', '#1d314d', 0.4);
+    drawRidge(h * 0.77, 58, 5, '#728dad', '#293e5c', 1.8);
+
+    // 6. Rolling snow-blanketed hills in middle distance
+    const hillGrad = ctx.createLinearGradient(0, h * 0.72, 0, h);
+    hillGrad.addColorStop(0, '#c6d6ea');
+    hillGrad.addColorStop(0.5, '#8fa6c2');
+    hillGrad.addColorStop(1, '#4c627e');
+    ctx.fillStyle = hillGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let x = 0; x <= w; x += 16) {
+      const a = (x / w) * Math.PI * 2;
+      ctx.lineTo(x, h * 0.78 + Math.sin(a * 2 + 0.5) * 18 + Math.cos(a * 4) * 8);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+
+    // Helper: painterly multi-tiered snow-dusted pine silhouette
+    const drawPine = (px, py, ph, col, snowAlpha = 0.65) => {
+      const tiers = 5;
+      for (let t = 0; t < tiers; t++) {
+        const f = t / (tiers - 1);
+        const tw = ph * (0.34 - f * 0.21);
+        const ty = py - ph * (0.16 + f * 0.72);
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(px, ty - ph * 0.22);
+        ctx.lineTo(px - tw, ty + ph * 0.08);
+        ctx.lineTo(px + tw, ty + ph * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        // Snow dusting along top slopes
+        ctx.fillStyle = `rgba(222,236,252,${snowAlpha * (0.55 + f * 0.45)})`;
+        ctx.beginPath();
+        ctx.moveTo(px, ty - ph * 0.22);
+        ctx.lineTo(px - tw * 0.72, ty - ph * 0.04);
+        ctx.lineTo(px, ty - ph * 0.09);
+        ctx.lineTo(px + tw * 0.72, ty - ph * 0.04);
+        ctx.closePath();
+        ctx.fill();
+      }
+    };
+
+    // Distant pine treeline
+    const pineCount = mode === 'panorama' ? 88 : 42;
+    for (let i = 0; i < pineCount; i++) {
+      const px = (i / pineCount) * w + (rand() - 0.5) * 18;
+      const py = h * (0.81 + rand() * 0.07);
+      const ph = 42 + rand() * 58;
+      drawPine(px, py, ph, '#122636', 0.52);
+    }
+
+    // 7. Storybook Alpine village houses + church steeple with glowing warm amber windows!
+    const houseSpots = mode === 'panorama'
+      ? [0.06, 0.14, 0.23, 0.34, 0.46, 0.58, 0.69, 0.81, 0.92]
+      : [0.22, 0.46, 0.54, 0.76];
+
+    for (let i = 0; i < houseSpots.length; i++) {
+      const hx = houseSpots[i] * w;
+      const hy = h * 0.82 + (i % 2) * 10;
+      const hw = 42 + (i % 3) * 14;
+      const hh = 34 + (i % 2) * 14;
+
+      // Subtle golden glow pool on snow in front of cottage
+      const wg = ctx.createRadialGradient(hx, hy - hh * 0.3, 4, hx, hy, hw * 1.4);
+      wg.addColorStop(0, 'rgba(255,196,96,0.34)');
+      wg.addColorStop(1, 'rgba(255,196,96,0)');
+      ctx.fillStyle = wg;
+      ctx.fillRect(hx - hw * 1.4, hy - hh * 1.2, hw * 2.8, hw * 2.2);
+
+      // House facade & snowy pitched gable roof
+      ctx.fillStyle = '#25212a';
+      ctx.fillRect(hx - hw / 2, hy - hh, hw, hh);
+      ctx.fillStyle = '#d8e6f6';
+      ctx.beginPath();
+      ctx.moveTo(hx - hw * 0.62, hy - hh + 2);
+      ctx.lineTo(hx, hy - hh - hw * 0.44);
+      ctx.lineTo(hx + hw * 0.62, hy - hh + 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Optional village church steeple on one cottage
+      if (i === 1 || i === 5) {
+        ctx.fillStyle = '#222838';
+        ctx.fillRect(hx - 10, hy - hh - 46, 20, 48);
+        ctx.fillStyle = '#dce8f8';
+        ctx.beginPath();
+        ctx.moveTo(hx - 13, hy - hh - 46);
+        ctx.lineTo(hx, hy - hh - 88);
+        ctx.lineTo(hx + 13, hy - hh - 46);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Warm glowing windows
+      ctx.fillStyle = '#ffd580';
+      const cols = hw > 48 ? 3 : 2;
+      for (let c = 0; c < cols; c++) {
+        const wx = hx - hw * 0.34 + (c / Math.max(1, cols - 1)) * hw * 0.68 - 4;
+        ctx.fillRect(wx, hy - hh * 0.68, 8, 10);
+      }
+    }
+
+    // Foreground framing frosted spruce silhouettes
+    const fgCount = mode === 'panorama' ? 52 : 16;
+    for (let i = 0; i < fgCount; i++) {
+      const px = (i / fgCount) * w + (rand() - 0.5) * 26;
+      const py = h * (0.93 + rand() * 0.08);
+      const ph = 72 + rand() * 78;
+      drawPine(px, py, ph, '#0c1c28', 0.72);
+    }
+
+    return configureTexture(canvas, {
+      repeatX: 1,
+      repeatY: 1,
+      srgb: true,
+      wrap: mode === 'panorama' ? T.RepeatWrapping : T.ClampToEdgeWrapping,
+    });
+  });
+}
+
+/**
+ * Richly illustrated warm-lit Christmas Market chalet shopfront interior texture
+ * (wooden shelves, glowing brass lanterns, mulled wine mugs, gingerbread & toys!).
+ */
+export function chaletInteriorTexture(variant = 0) {
+  return memo('chalet-interior:' + variant, () => {
+    const w = 512, h = 256;
+    const [canvas, ctx] = makeCanvas(w, h);
+    const rand = mulberry32(4100 + variant * 131);
+
+    // Warm candlelit timber interior backdrop
+    const bg = ctx.createRadialGradient(w * 0.5, h * 0.42, 16, w * 0.5, h * 0.5, w * 0.68);
+    bg.addColorStop(0, '#ffd48a');
+    bg.addColorStop(0.45, '#c77a38');
+    bg.addColorStop(1, '#582c16');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Vertical tongue-and-groove interior wood wall lines
+    ctx.strokeStyle = 'rgba(54,24,10,0.28)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x < w; x += 28) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+
+    // Two interior wooden display shelves loaded with festive goods!
+    const shelfYs = [110, 185];
+    const itemPalette = variant === 0
+      ? ['#9c252b', '#20553f', '#e8be6c', '#f5e8ce', '#b8532a']
+      : ['#235440', '#b83236', '#e6c27a', '#d48d56', '#f2e4cc'];
+
+    for (const sy of shelfYs) {
+      ctx.fillStyle = '#472615';
+      ctx.fillRect(16, sy, w - 32, 12);
+      ctx.fillStyle = 'rgba(255,222,158,0.25)';
+      ctx.fillRect(16, sy, w - 32, 3);
+
+      // Painted jars, wrapped boxes, ceramic mugs & nutcrackers along shelf
+      let x = 28;
+      while (x < w - 52) {
+        const iw = 20 + rand() * 24;
+        const ih = 28 + rand() * 28;
+        ctx.fillStyle = itemPalette[Math.floor(rand() * itemPalette.length)];
+        ctx.beginPath();
+        ctx.roundRect(x, sy - ih, iw, ih, 4);
+        ctx.fill();
+        // Highlight & ribbon detail
+        ctx.fillStyle = 'rgba(255,244,214,0.35)';
+        ctx.fillRect(x + 3, sy - ih + 3, 4, ih - 6);
+        if (rand() > 0.45) {
+          ctx.fillStyle = '#f2cf84';
+          ctx.fillRect(x + iw * 0.42, sy - ih, 4, ih);
+        }
+        x += iw + 10 + rand() * 14;
+      }
+    }
+
+    // Hanging warm string lights & lanterns across top of shop interior
+    ctx.strokeStyle = '#331c10';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 24);
+    ctx.quadraticCurveTo(w * 0.5, 62, w, 24);
+    ctx.stroke();
+
+    for (let i = 1; i <= 7; i++) {
+      const t = i / 8;
+      const lx = w * t;
+      const ly = 24 + 4 * 38 * t * (1 - t);
+      const lg = ctx.createRadialGradient(lx, ly, 2, lx, ly, 26);
+      lg.addColorStop(0, 'rgba(255,252,232,1)');
+      lg.addColorStop(0.35, 'rgba(255,214,126,0.75)');
+      lg.addColorStop(1, 'rgba(255,190,85,0)');
+      ctx.fillStyle = lg;
+      ctx.beginPath(); ctx.arc(lx, ly, 26, 0, Math.PI * 2); ctx.fill();
+    }
+
+    return configureTexture(canvas, { srgb: true, wrap: T.ClampToEdgeWrapping });
+  });
+}
+
+/**
+ * Vintage hand-lettered signboard / Parisian bakery chalkboard menu texture.
+ */
+export function signTexture(title, subtitle, { bg = '#1c2420', border = '#d8ae62', fg = '#f7ebd2' } = {}) {
+  return memo(`sign:${title}:${subtitle}`, () => {
+    const [canvas, ctx] = makeCanvas(512, 256);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 512, 256);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(16, 16, 480, 224);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(26, 26, 460, 204);
+
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 54px Georgia, serif';
+    ctx.fillText(title, 256, 108);
+    ctx.fillStyle = border;
+    ctx.font = 'italic 28px Georgia, serif';
+    ctx.fillText(`✦  ${subtitle}  ✦`, 256, 174);
+
+    return configureTexture(canvas, { srgb: true, wrap: T.ClampToEdgeWrapping });
+  });
+}
+
+/**
+ * Soft architectural sconce wall-wash light cone texture (projected subtly onto walls).
+ */
+export function wallWashTexture() {
+  return memo('wall-wash', () => {
+    const [canvas, ctx] = makeCanvas(256, 256);
+    const g = ctx.createRadialGradient(128, 128, 6, 128, 128, 122);
+    g.addColorStop(0.0, 'rgba(255,212,138,0.65)');
+    g.addColorStop(0.38, 'rgba(255,186,102,0.26)');
+    g.addColorStop(0.75, 'rgba(255,168,84,0.06)');
+    g.addColorStop(1.0, 'rgba(255,168,84,0.0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 256, 256);
+    return configureTexture(canvas, { srgb: true, wrap: T.ClampToEdgeWrapping });
+  });
+}
+
+/**
  * Woven circular Nordic / Patisserie tree rug texture.
  */
 export function rugTexture(key, { base, ring1, ring2, accent }) {
@@ -501,6 +949,8 @@ export function glowSpriteTexture() {
 }
 
 /**
+ * Rich grained wood PBR textures (smoked walnut / honey oak / chalet timber)
+
  * Soft circular ground contact shadow under the tree.
  */
 export function contactShadowTexture() {
@@ -519,7 +969,9 @@ export function contactShadowTexture() {
 }
 
 /**
- * Procedural HDR-inspired equirectangular environment texture per architectural mood,
+ * Rich grained wood PBR textures (smoked walnut / honey oak / chalet timber)
+ * so beams, wainscoting, cabinetry, and chalets never look like flat plastic!
+
  * passed through PMREMGenerator for lifelike reflections on glass, brass, and ornaments.
  */
 export function createEnvironmentMap(renderer, key) {
