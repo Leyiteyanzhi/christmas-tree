@@ -218,3 +218,39 @@ export function setupFullscreen(button, onChange) {
   syncUI();
   return { isActive: () => active, enter, exit };
 }
+
+/**
+ * Compact URL-safe share link encoding/decoding for 3D tree layouts (zero backend!).
+ * Format: v1|tree|backdrop|light|site:itemIdx,site:itemIdx... -> base64url in #share=...
+ */
+export function encodeShareHash(treeKey, draft, itemKeys) {
+  const indexOf = new Map(itemKeys.map((k, i) => [k, i]));
+  const pairs = draft.items
+    .map(({ key, site }) => (indexOf.has(key) ? `${site}:${indexOf.get(key)}` : ''))
+    .filter(Boolean)
+    .join(',');
+  const raw = `v1|${treeKey}|${draft.backdrop}|${draft.light}|${pairs}`;
+  const b64 = btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return '#share=' + b64;
+}
+
+export function decodeShareHash(hash, itemKeys) {
+  if (!hash || !hash.startsWith('#share=')) return null;
+  try {
+    const token = hash.slice('#share='.length).replace(/-/g, '+').replace(/_/g, '/');
+    const pad = token.length % 4 ? '='.repeat(4 - (token.length % 4)) : '';
+    const raw = atob(token + pad);
+    const [ver, tree, backdrop, light, pairsRaw = ''] = raw.split('|');
+    if (ver !== 'v1' || !tree || !backdrop || !light) return null;
+    const items = pairsRaw
+      ? pairsRaw.split(',').map(pair => {
+          const [s, k] = pair.split(':').map(Number);
+          const key = itemKeys[k];
+          return Number.isInteger(s) && key ? { site: s, key } : null;
+        }).filter(Boolean)
+      : [];
+    return { tree, draft: { backdrop, light, items } };
+  } catch {
+    return null;
+  }
+}

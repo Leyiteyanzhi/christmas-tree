@@ -22,7 +22,7 @@
   background: radial-gradient(ellipse at 50% 50%, transparent 62%, rgba(8, 12, 14, 0.34) 100%);
 }
 .picture::after { z-index: 2; }
-.scene-top, .mode-controls, .scene-bottom { z-index: 3; }
+.scene-top, .mode-controls, .scene-bottom, .fs-dock { z-index: 3; }
 
 .glass {
   background: rgba(16, 30, 27, 0.72);
@@ -59,15 +59,134 @@
 }
 .remove-item:hover:not(:disabled) { background: #7a2c3a; }
 
+/* Clean balanced masthead layout so action pills never overlap the centered title */
+@media (min-width: 781px) {
+  .masthead {
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 14px;
+    gap: 16px;
+  }
+  .brand-copy {
+    text-align: left;
+  }
+  .masthead-actions {
+    position: static;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+  .masthead-actions .save-state {
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 781px) and (max-width: 1280px) {
+  .masthead-actions .save-state { display: none; }
+}
+
+/* Masthead compact icon controls (Language & Ambience Audio) */
+.icon-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #e6bb7e99;
+  border-radius: 8px;
+  background: #35151b80;
+  color: var(--card);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.icon-pill:hover:not(:disabled) { background: #6c3039; }
+.icon-pill[aria-pressed="true"] {
+  background: #f5d89e38;
+  border-color: #ffe2a8;
+  color: #ffe7b3;
+}
+.icon-pill .icon-on { display: none; }
+.icon-pill[aria-pressed="true"] .icon-on { display: block; }
+.icon-pill[aria-pressed="true"] .icon-off { display: none; }
+
+/* Fullscreen floating quick dock (bottom-left, visible only while in fullscreen!) */
+.fs-dock {
+  display: none;
+  position: absolute;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: calc(14px + env(safe-area-inset-left));
+  padding: 2px;
+  gap: 2px;
+}
+body.is-fullscreen .fs-dock { display: flex; }
+.fs-dock button[aria-pressed="true"],
+.fs-dock button[data-light-state="warm"],
+.fs-dock button[data-light-state="colour"] {
+  background: rgba(255, 232, 178, 0.22);
+  color: #ffe7ab;
+}
+.fs-dock .icon-on { display: none; }
+.fs-dock button[aria-pressed="true"] .icon-on { display: block; }
+.fs-dock button[aria-pressed="true"] .icon-off { display: none; }
+
+/* Photo & Holiday Card preview dialog enhancements */
+.photo-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+.card-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.card-greeting-field {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.card-greeting-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  color: var(--evergreen);
+  background: #fffaf0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
 .categories { overflow-x: auto; }
 @media (min-width: 781px) and (max-width: 1050px) {
   .categories { flex-wrap: wrap; justify-content: flex-start; }
+}
+@media (max-width: 780px) {
+  .masthead-actions { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .masthead-actions .help-button,
+  .masthead-actions .icon-pill,
+  .masthead-actions .primary { min-height: 36px; padding-inline: 9px; font-size: 12px; }
 }
 @media (max-width: 470px) {
   .scene-top { top: 8px; left: 8px; gap: 4px; }
   .scene-top .glass button { min-width: 32px; min-height: 34px; padding: 0 4px; }
   .mode-controls { top: 8px; right: 8px; }
   .mode-controls button { font-size: 11px; min-height: 34px; padding: 0 7px; }
+  .fs-dock {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    left: calc(10px + env(safe-area-inset-left));
+  }
+  .fs-dock button { min-width: 34px; min-height: 36px; }
   .trees { grid-template-columns: 1fr; }
   .starts { grid-column: 1; grid-row: 3; display: flex; align-items: center; gap: 8px; margin: 5px 0; }
   .starts legend { float: left; margin: 0; }

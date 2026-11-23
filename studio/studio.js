@@ -1,9 +1,21 @@
 import * as T from './vendor/three.js';
 import { trees, backdrops, items } from '../scene.js';
-import { setupTray, setupWorks, setupFullscreen, workFile, isWorkFile } from '../workshop-tools.js';
+import {
+  setupTray,
+  setupWorks,
+  setupFullscreen,
+  workFile,
+  isWorkFile,
+  encodeShareHash,
+  decodeShareHash,
+} from '../workshop-tools.js';
 import { createEnvironmentMap } from './textures.js';
 import { createWorldManager } from './worlds.js';
 import { buildVolumetricTree } from './trees.js';
+import { hasProceduralOrnament, buildProceduralOrnament } from './ornaments.js';
+import { createStudioAudio } from './audio.js';
+import { createI18n } from './i18n.js';
+import { composePhotoCard } from './postcard.js';
 import {
   enhanceOrnament,
   createTreeCollar,
@@ -14,12 +26,19 @@ import {
 const studioUrl = path => new URL(path, import.meta.url).href;
 const $ = selector => document.querySelector(selector);
 const canvas = $('#view');
+const itemKeys = Object.keys(items);
 const crowns = {}, drafts = {}, histories = {};
 let activeTree = 'pine';
 const treeWidth = () => trees[activeTree].width / trees.pine.width;
 const treeHeight = () => (728 - trees[activeTree].top) / (728 - trees.pine.top);
 const lights = ['warm', 'colour', 'off'];
 const store = 'snow-window-studio-3d-v1';
+
+const isMobileDevice = matchMedia('(max-width: 780px), (pointer: coarse)').matches;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const i18n = createI18n();
+i18n.initDoc();
+const audio = createStudioAudio();
 
 const scene = new T.Scene();
 scene.background = new T.Color(0x131d1b);
@@ -45,22 +64,29 @@ const tray = setupTray(
 );
 
 const worlds = createWorldManager(worldsRoot);
-let renderer, draft, garland, guides, selected, material, gesture;
+let renderer, draft, garland, guides, selected, material, gesture, fullscreen;
 let busy = false;
 let autoOrbit = false;
 let mode = 'turn';
+let activeCategory = 'all';
 
-// Smooth damped camera state (targets vs current rendered values)
+// Smooth damped camera state
 let targetZoom = 1, zoom = 1;
 let targetAzimuth = 0, azimuth = 0;
 let targetElevation = 0.115, elevation = 0.115;
 
-// Shared cinematic lighting rig (adapted dynamically per world!)
+// Shared cinematic lighting rig + smooth target interpolation for world/light transitions
 let hemiLight, keyLight, rimLight, fillLight;
+let lightingTarget = null;
+
+// Placement spring pop-in & gentle pendulum sway animations (siteId -> { start, isFloor })
+const ornamentAnims = new Map();
+let lastPlacedSite = null;
 
 let past = [], future = [];
 const historyLimit = 60;
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const t = () => i18n.t();
+const itemName = key => t().items[key] || items[key].name;
 const say = text => { $('#hint').textContent = text; };
 const type = key => items[key].category === 'topper' ? 'top' : items[key].category === 'floor' ? 'floor' : 'branch';
 const objectAt = site => draft.items.find(item => item.site === site);
@@ -77,6 +103,10 @@ function ensureTree(key) {
 
 function loadModel(key, file, library, parent) {
   if (library[key]) return Promise.resolve();
+  if (library === models && hasProceduralOrnament(key)) {
+    library[key] = buildProceduralOrnament(key);
+    return Promise.resolve();
+  }
   if (pending.has(file)) return pending.get(file);
   const request = loader.loadAsync(studioUrl('./models/' + file + '.glb')).then(gltf => {
     const model = gltf.scene;
@@ -121,34 +151,49 @@ async function withAssets(load, apply) {
 function change(load, apply) {
   return withAssets(load, apply).catch(error => {
     console.error(error);
-    say('Could not load this item or scene. Try again.');
+    say(t().hintLoadError);
   });
 }
 
-function applyWorldMood(backdropKey) {
+function applyWorldMood(backdropKey, immediate = false) {
   const world = worlds.activate(backdropKey);
+  audio.setWorld(backdropKey);
   scene.background = world.background;
   scene.fog = world.fog;
   if (renderer) {
     scene.environment = createEnvironmentMap(renderer, backdropKey);
-    renderer.toneMappingExposure = world.lighting.exposure;
   }
   const L = world.lighting;
-  hemiLight.color.setHex(L.hemiSky);
-  hemiLight.groundColor.setHex(L.hemiGround);
-  hemiLight.intensity = L.hemiIntensity;
-
-  keyLight.color.setHex(L.keyColor);
-  keyLight.intensity = L.keyIntensity;
-  keyLight.position.set(...L.keyPos);
-
-  rimLight.color.setHex(L.rimColor);
-  rimLight.intensity = L.rimIntensity;
-  rimLight.position.set(...L.rimPos);
-
-  fillLight.color.setHex(L.fillColor);
-  fillLight.intensity = L.fillIntensity;
-  fillLight.position.set(...L.fillPos);
+  lightingTarget = {
+    hemiSky: new T.Color(L.hemiSky),
+    hemiGround: new T.Color(L.hemiGround),
+    hemiIntensity: L.hemiIntensity,
+    keyColor: new T.Color(L.keyColor),
+    keyIntensity: L.keyIntensity,
+    keyPos: new T.Vector3(...L.keyPos),
+    rimColor: new T.Color(L.rimColor),
+    rimIntensity: L.rimIntensity,
+    rimPos: new T.Vector3(...L.rimPos),
+    fillColor: new T.Color(L.fillColor),
+    fillIntensity: L.fillIntensity,
+    fillPos: new T.Vector3(...L.fillPos),
+    exposure: L.exposure,
+  };
+  if (immediate) {
+    hemiLight.color.copy(lightingTarget.hemiSky);
+    hemiLight.groundColor.copy(lightingTarget.hemiGround);
+    hemiLight.intensity = lightingTarget.hemiIntensity;
+    keyLight.color.copy(lightingTarget.keyColor);
+    keyLight.intensity = lightingTarget.keyIntensity;
+    keyLight.position.copy(lightingTarget.keyPos);
+    rimLight.color.copy(lightingTarget.rimColor);
+    rimLight.intensity = lightingTarget.rimIntensity;
+    rimLight.position.copy(lightingTarget.rimPos);
+    fillLight.color.copy(lightingTarget.fillColor);
+    fillLight.intensity = lightingTarget.fillIntensity;
+    fillLight.position.copy(lightingTarget.fillPos);
+    if (renderer) renderer.toneMappingExposure = lightingTarget.exposure;
+  }
 }
 
 function syncCamera(resize = false) {
@@ -156,8 +201,6 @@ function syncCamera(resize = false) {
   if (width < 2 || height < 2) return;
   if (resize) renderer.setSize(width, height, false);
   camera.aspect = width / height;
-  // Architectural walls & stalls sit at r >= 4.95; keeping distance <= 4.40 ensures
-  // the camera always glides cleanly inside the diorama at every angle and zoom.
   const framingDistance = Math.max(7.12, 5.0 / camera.aspect) / zoom;
   const distance = Math.min(4.40, framingDistance);
   camera.fov = T.MathUtils.radToDeg(
@@ -176,19 +219,29 @@ function syncCamera(resize = false) {
   refreshSpots();
 }
 
+function syncOrbitButtons() {
+  const txt = autoOrbit ? t().pauseOrbit : t().autoOrbit;
+  $('#auto-orbit').textContent = txt;
+  $('#auto-orbit').setAttribute('aria-pressed', String(autoOrbit));
+  const fsOrbit = $('#fs-orbit');
+  if (fsOrbit) {
+    fsOrbit.setAttribute('aria-pressed', String(autoOrbit));
+    fsOrbit.title = txt;
+    fsOrbit.setAttribute('aria-label', txt);
+  }
+}
+
 function stopOrbit() {
   if (!autoOrbit) return;
   autoOrbit = false;
-  $('#auto-orbit').textContent = 'Auto orbit';
-  $('#auto-orbit').setAttribute('aria-pressed', 'false');
+  syncOrbitButtons();
 }
 
 function startOrbit() {
   setMode('turn');
   autoOrbit = true;
-  $('#auto-orbit').textContent = 'Pause orbit';
-  $('#auto-orbit').setAttribute('aria-pressed', 'true');
-  say('Tap the scene or Pause orbit to stop.');
+  syncOrbitButtons();
+  say(t().hintOrbiting);
 }
 
 function addSite(pos, kind) {
@@ -248,16 +301,17 @@ function persist() {
   drafts[activeTree] = draft;
   try {
     localStorage.setItem(store, JSON.stringify({ activeTree, drafts }));
-    $('#saved').textContent = 'Draft saved';
+    $('#saved').textContent = t().draftSaved;
   } catch {
-    $('#saved').textContent = 'Storage unavailable · save a photo to keep your tree';
+    $('#saved').textContent = t().storageUnavailable;
   }
 }
 
-function commit(next) {
+function commit(next, animatedSite = null) {
   past.push(draft);
   if (past.length > historyLimit) past.shift();
   future.length = 0;
+  lastPlacedSite = animatedSite;
   draft = next;
   rebuild();
   persist();
@@ -270,6 +324,8 @@ function history(from, to) {
     to.push(draft);
     draft = from.pop();
     selected = null;
+    lastPlacedSite = null;
+    audio.playSoftClick();
     rebuild();
     persist();
   });
@@ -315,27 +371,44 @@ function refreshSpots() {
 
 function renderLights() {
   garland.applyMode(draft.light);
-  // Subtle warm inner foliage glow when lights are on
   const crown = crowns[activeTree];
   if (crown?.userData?.needleMats) {
-    const emissiveStrength = draft.light === 'off' ? 0.09 : 0.19;
+    const emissiveStrength = draft.light === 'off' ? 0.08 : 0.19;
+    const emissiveHex = draft.light === 'off' ? 0x122217 : 0x262917;
     for (const mat of crown.userData.needleMats) {
+      mat.emissive.setHex(emissiveHex);
       mat.emissiveIntensity = emissiveStrength;
     }
   }
+  const fsLight = $('#fs-light');
+  if (fsLight) {
+    fsLight.dataset.lightState = draft.light;
+    const labelMap = { off: t().lightOff, warm: t().lightWarm, colour: t().lightColour };
+    fsLight.title = `${t().lightsLabel}: ${labelMap[draft.light]}`;
+    fsLight.setAttribute('aria-label', fsLight.title);
+  }
 }
 
-function rebuild() {
+function rebuild(immediateMood = false) {
   ornaments.clear();
   floorItems.clear();
-  applyWorldMood(draft.backdrop);
+  ornamentAnims.clear();
+  applyWorldMood(draft.backdrop, immediateMood);
+  const nowSec = performance.now() / 1000;
   for (const { key, site } of draft.items) {
     const model = models[key].clone();
     model.userData.site = site;
     model.position.copy(localPoint(sites[site]));
-    model.rotation.y = Math.atan2(model.position.x, model.position.z);
+    const baseYaw = Math.atan2(model.position.x, model.position.z);
+    model.rotation.y = baseYaw;
+    model.userData.baseYaw = baseYaw;
     (type(key) === 'floor' ? floorItems : ornaments).add(model);
+    if (site === lastPlacedSite && !reducedMotion.matches) {
+      ornamentAnims.set(model, { start: nowSec, kind: type(key) });
+      model.scale.setScalar(0.08);
+    }
   }
+  lastPlacedSite = null;
   renderLights();
   controls();
 }
@@ -382,25 +455,26 @@ function hit(x, y) {
 }
 
 function place(site) {
-  if (site == null) { say('Tap a glowing spot, or orbit to see the other side.'); return; }
+  if (site == null) { say(t().hintNoSpot); return; }
   if (material) {
     const key = material;
-    commit({ ...draft, items: [...draft.items.filter(item => item.site !== site), { key, site }] });
-    say(items[key].name + ' placed. Choose another spot or switch to Edit ornaments.');
+    audio.playPlace(items[key].category);
+    commit({ ...draft, items: [...draft.items.filter(item => item.site !== site), { key, site }] }, site);
+    say(t().hintPlaced(itemName(key)));
   } else if (selected != null && site !== selected) {
     const old = selected;
+    const movingKey = objectAt(old)?.key;
     selected = site;
-    commit({ ...draft, items: draft.items.map(item => item.site === old ? { ...item, site } : item) });
-    say('Ornament moved.');
+    if (movingKey) audio.playPlace(items[movingKey].category);
+    commit({ ...draft, items: draft.items.map(item => item.site === old ? { ...item, site } : item) }, site);
+    say(t().hintMoved);
   }
 }
 
 function setMode(next) {
   stopOrbit();
   mode = next; material = null; selected = null;
-  say(mode === 'turn'
-    ? 'Drag to orbit the tree. Pinch or scroll to zoom.'
-    : 'Tap an ornament to move or remove it. Drag empty space to orbit.');
+  say(mode === 'turn' ? t().hintOrbit : t().hintEdit);
   controls();
 }
 
@@ -422,8 +496,6 @@ canvas.addEventListener('pointerdown', e => {
     elevation: targetElevation,
     drag: false,
     site: hitSite,
-    // Allow orbiting whenever dragging in turn mode, while placing a chosen ornament,
-    // or when dragging empty space (not directly on an ornament) in edit mode.
     orbiting: mode === 'turn' || material != null || hitSite == null,
   };
 });
@@ -453,13 +525,12 @@ function end(e, cancel) {
   if (!fingers.delete(e.pointerId) || !gesture) return;
   if (!cancel && !gesture.pinch && mode === 'edit') {
     if (material) {
-      // Tap places the chosen ornament; drag orbits the scene without accidental placement.
       if (!gesture.drag) place(nearest(e.clientX, e.clientY));
     } else if (gesture.drag && !gesture.orbiting && gesture.site != null) {
       place(nearest(e.clientX, e.clientY));
     } else if (!gesture.drag && gesture.site != null) {
       selected = gesture.site;
-      say('Drag this ornament or tap a glowing spot to move it. Drag empty space to orbit.');
+      say(t().hintSelected);
       controls();
     } else if (!gesture.drag && selected != null) {
       const spot = nearest(e.clientX, e.clientY);
@@ -484,14 +555,15 @@ function setupLighting() {
   hemiLight = new T.HemisphereLight(0xffeed6, 0x3b261b, 0.72);
   scene.add(hemiLight);
 
+  const shadowSize = isMobileDevice ? 1024 : 2048;
   keyLight = new T.DirectionalLight(0xffe3bd, 1.75);
   keyLight.position.set(-2.6, 5.2, 3.8);
   keyLight.castShadow = true;
   Object.assign(keyLight.shadow.camera, { left: -3.2, right: 3.2, top: 4.2, bottom: -3.2, near: 0.2, far: 16 });
-  keyLight.shadow.mapSize.set(2048, 2048);
+  keyLight.shadow.mapSize.set(shadowSize, shadowSize);
   keyLight.shadow.bias = -0.0004;
   keyLight.shadow.normalBias = 0.022;
-  keyLight.shadow.radius = 3.2;
+  keyLight.shadow.radius = isMobileDevice ? 2.4 : 3.2;
   scene.add(keyLight);
 
   rimLight = new T.DirectionalLight(0x89bfff, 1.05);
@@ -502,7 +574,6 @@ function setupLighting() {
   fillLight.position.set(3.2, 2.4, -2.5);
   scene.add(fillLight);
 
-  // Add bespoke tree base collar & redesigned fairy lights
   tree.add(createTreeCollar());
   garland = createLightGarland(tree);
 }
@@ -516,6 +587,228 @@ function pictureButton(className, asset) {
   image.alt = '';
   button.append(image);
   return button;
+}
+
+function syncAudioButtons() {
+  const on = audio.isEnabled();
+  const label = on ? t().soundOn : t().soundOff;
+  for (const sel of ['#toggle-audio', '#fs-audio']) {
+    const el = $(sel);
+    if (!el) continue;
+    el.setAttribute('aria-pressed', String(on));
+    el.title = label;
+    el.setAttribute('aria-label', label);
+  }
+}
+
+/**
+ * Apply active Chinese / English localization across every UI element in the 3D studio.
+ */
+function applyLanguage() {
+  const tr = t();
+  $('.brand-copy h1').textContent = tr.brandTitle;
+  $('.brand-copy p').textContent = tr.brandSub;
+  $('.studio-link').textContent = tr.link2d;
+  $('#show-help').textContent = tr.help;
+  $('#show-works').textContent = tr.works;
+  if ($('#share-tree')) $('#share-tree').textContent = tr.share;
+  if ($('#toggle-lang')) $('#toggle-lang').textContent = i18n.lang === 'zh' ? 'EN' : '中文';
+  const photoLabel = $('#photo .btn-label');
+  if (photoLabel) photoLabel.textContent = tr.photo;
+  $('#tree-title').textContent = tr.chooseTree;
+  $('.starts legend').textContent = tr.startLayout;
+  $('#empty').textContent = tr.emptyTree;
+  $('#starter').textContent = tr.starter;
+  $('#backdrop-title').textContent = tr.changeScene;
+  $('.inspiration summary').innerHTML = `<span aria-hidden="true">✦</span> ${tr.tipSummary}`;
+  $('.inspiration p').textContent = tr.tipBody;
+  $('#turn').textContent = tr.orbitView;
+  $('#edit').textContent = tr.editOrnaments;
+  $('#remove').textContent = tr.removeOrnament;
+  $('.lights-label').textContent = tr.lightsLabel;
+  $('[data-light=off]').textContent = tr.lightOff;
+  $('[data-light=warm]').textContent = tr.lightWarm;
+  $('[data-light=colour]').textContent = tr.lightColour;
+  $('#materials-title').textContent = tr.ornamentsTitle;
+  $('#undo').title = tr.undo; $('#undo').setAttribute('aria-label', tr.undo);
+  $('#redo').title = tr.redo; $('#redo').setAttribute('aria-label', tr.redo);
+  $('#more').title = tr.zoomIn; $('#more').setAttribute('aria-label', tr.zoomIn);
+  $('#less').title = tr.zoomOut; $('#less').setAttribute('aria-label', tr.zoomOut);
+  $('#home').title = tr.resetView; $('#home').setAttribute('aria-label', tr.resetView);
+  const trayToggle = $('.tray-toggle');
+  if (trayToggle) {
+    const expanded = $('.materials').classList.contains('tray-expanded');
+    trayToggle.textContent = expanded ? tr.showLess : tr.browseAll;
+  }
+
+  // Trees
+  for (const btn of document.querySelectorAll('[data-tree]')) {
+    const info = tr.trees[btn.dataset.tree];
+    if (!info) continue;
+    btn.querySelector('strong').textContent = info.name;
+    btn.querySelector('small').textContent = info.description;
+  }
+  // Scenes
+  for (const btn of document.querySelectorAll('[data-setting]')) {
+    const label = btn.querySelector('.setting-label');
+    if (label && tr.backdrops[btn.dataset.setting]) label.textContent = tr.backdrops[btn.dataset.setting];
+  }
+  // Categories
+  for (const btn of document.querySelectorAll('#category [data-category]')) {
+    btn.textContent = tr.categories[btn.dataset.category] || btn.textContent;
+  }
+  // Ornaments
+  let visibleCount = 0;
+  for (const tile of document.querySelectorAll('#palette [data-key]')) {
+    const label = tile.querySelector('.item-label');
+    if (label) label.textContent = itemName(tile.dataset.key);
+    if (!tile.hidden) visibleCount++;
+  }
+  $('#material-count').textContent = tr.itemsCount(visibleCount);
+
+  // Help dialog
+  $('#help-title').textContent = tr.helpTitle;
+  const helpList = $('.help-steps');
+  if (helpList) {
+    helpList.replaceChildren(...tr.helpSteps.map(([h, p]) => {
+      const li = document.createElement('li');
+      const h3 = document.createElement('h3'); h3.textContent = h;
+      const para = document.createElement('p'); para.textContent = p;
+      li.append(h3, para);
+      return li;
+    }));
+  }
+  $('#help-dialog .help-actions .primary').textContent = tr.backToStudio;
+
+  // Works dialog
+  $('#works-title').textContent = tr.worksTitle;
+  const worksLabels = document.querySelectorAll('#works-dialog .works-row label');
+  if (worksLabels[0]) worksLabels[0].firstChild.textContent = tr.copyName + ' ';
+  const copyInput = $('#works-dialog input[type=text]');
+  if (copyInput) copyInput.placeholder = tr.copyPlaceholder;
+  if ($('[data-work=copy]')) $('[data-work=copy]').textContent = tr.saveCopy;
+  if (worksLabels[1]) worksLabels[1].firstChild.textContent = tr.savedCopies + ' ';
+  if ($('[data-work=open]')) $('[data-work=open]').textContent = tr.open;
+  if ($('[data-work=delete]')) $('[data-work=delete]').textContent = tr.delete;
+  if ($('[data-work=export]')) $('[data-work=export]').textContent = tr.downloadProject;
+  if (worksLabels[2]) worksLabels[2].firstChild.textContent = tr.openProjectFile + ' ';
+
+  // Photo & Card dialog
+  if ($('#photo-title')) $('#photo-title').textContent = tr.photoTitle;
+  if ($('[data-photo-style=clean]')) $('[data-photo-style=clean]').textContent = tr.photoStyleClean;
+  if ($('[data-photo-style=card]')) $('[data-photo-style=card]').textContent = tr.photoStyleCard;
+  if ($('[data-photo-ratio=wide]')) $('[data-photo-ratio=wide]').textContent = tr.photoRatioWide;
+  if ($('[data-photo-ratio=portrait]')) $('[data-photo-ratio=portrait]').textContent = tr.photoRatioPortrait;
+  if ($('#card-greeting-label')) $('#card-greeting-label').textContent = tr.photoGreetingLabel;
+  const greetInput = $('#card-greeting');
+  if (greetInput && (!greetInput.value || greetInput.dataset.auto === 'true')) {
+    greetInput.value = tr.photoGreetingDefault;
+    greetInput.dataset.auto = 'true';
+  }
+  if ($('#download-photo')) $('#download-photo').textContent = tr.savePng;
+
+  syncOrbitButtons();
+  syncAudioButtons();
+  if ($('#saved').textContent) $('#saved').textContent = tr.draftSaved;
+  if (draft) renderLights();
+  if (mode === 'turn' && !autoOrbit) say(tr.hintOrbit);
+}
+
+/**
+ * Photo & Holiday Greeting Card Dialog controller.
+ */
+function setupPhotoCardDialog() {
+  const dialog = $('#photo-dialog');
+  const previewCanvas = $('#photo-preview');
+  const greetingInput = $('#card-greeting');
+  const cardOptions = $('#card-options');
+  const statusEl = $('#photo-status');
+  let capturedCanvas = null;
+  let photoStyle = 'card';
+  let photoRatio = 'portrait';
+
+  function renderPreview() {
+    if (!capturedCanvas) return;
+    const now = new Date();
+    const dateText = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+    composePhotoCard(previewCanvas, capturedCanvas, {
+      style: photoStyle,
+      ratio: photoRatio,
+      greeting: greetingInput?.value || t().photoGreetingDefault,
+      title: t().brandTitle,
+      dateText,
+    });
+    for (const b of document.querySelectorAll('[data-photo-style]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.photoStyle === photoStyle));
+    }
+    for (const b of document.querySelectorAll('[data-photo-ratio]')) {
+      b.setAttribute('aria-pressed', String(b.dataset.photoRatio === photoRatio));
+    }
+    if (cardOptions) cardOptions.hidden = photoStyle !== 'card';
+    if (statusEl) statusEl.hidden = true;
+  }
+
+  function openPhotoDialog() {
+    stopOrbit();
+    guides.setVisible(false);
+    renderer.render(scene, camera);
+    // Snapshot current crisp WebGL frame onto an offscreen canvas immediately
+    capturedCanvas = document.createElement('canvas');
+    capturedCanvas.width = canvas.width;
+    capturedCanvas.height = canvas.height;
+    capturedCanvas.getContext('2d').drawImage(canvas, 0, 0);
+    refreshSpots();
+
+    if (dialog) {
+      renderPreview();
+      dialog.showModal();
+    } else {
+      downloadCanvas(capturedCanvas);
+    }
+  }
+
+  function downloadCanvas(c) {
+    c.toBlob(blob => {
+      if (!blob) {
+        if (statusEl) { statusEl.textContent = t().photoError; statusEl.hidden = false; }
+        else say(t().photoError);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = photoStyle === 'card' ? 'christmas-tree-card-3d.png' : 'christmas-tree-3d.png';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }, 'image/png');
+  }
+
+  for (const b of document.querySelectorAll('[data-photo-style]')) {
+    b.onclick = () => { photoStyle = b.dataset.photoStyle; renderPreview(); };
+  }
+  for (const b of document.querySelectorAll('[data-photo-ratio]')) {
+    b.onclick = () => { photoRatio = b.dataset.photoRatio; renderPreview(); };
+  }
+  greetingInput?.addEventListener('input', () => {
+    greetingInput.dataset.auto = 'false';
+    renderPreview();
+  });
+  if ($('#download-photo')) $('#download-photo').onclick = () => downloadCanvas(previewCanvas);
+
+  return { open: openPhotoDialog };
+}
+
+async function copyShareLink() {
+  const hash = encodeShareHash(activeTree, draft, itemKeys);
+  const url = `${location.origin}${location.pathname}${hash}`;
+  try { window.history.replaceState(null, '', hash); } catch {}
+  try {
+    await navigator.clipboard.writeText(url);
+    say(t().hintShareCopied);
+  } catch {
+    say(t().hintShareReady);
+  }
+  audio.playSoftClick();
 }
 
 function bind() {
@@ -532,9 +825,10 @@ function bind() {
     button.onclick = () => {
       if (key === activeTree) return;
       change(() => ensureDraft(key, drafts[key]), () => {
+        audio.playSoftClick();
         switchTree(key);
         persist();
-        say('Choose an ornament or drag to look around.');
+        say(t().hintSwitchTree);
       });
     };
     $('#tree-kind').append(button);
@@ -542,19 +836,25 @@ function bind() {
   for (const [key, { name }] of Object.entries(backdrops)) {
     const button = pictureButton('backdrop-option', key + '-preview');
     button.dataset.setting = key;
-    button.append(name);
+    const span = document.createElement('span');
+    span.className = 'setting-label';
+    span.textContent = name;
+    button.append(span);
     button.onclick = () => {
       if (draft.backdrop !== key) {
         const next = { ...draft, backdrop: key };
-        change(() => ensureDraft(activeTree, next), () => commit(next));
+        change(() => ensureDraft(activeTree, next), () => {
+          audio.playSoftClick();
+          commit(next);
+        });
       }
     };
     $('#setting').append(button);
   }
-  $('#empty').onclick = () => { setMode('turn'); commit({ ...draft, items: [], light: 'off' }); };
+  $('#empty').onclick = () => { setMode('turn'); audio.playSoftClick(); commit({ ...draft, items: [], light: 'off' }); };
   $('#starter').onclick = () => {
     const next = { ...initialDraft(), backdrop: draft.backdrop };
-    change(() => ensureDraft(activeTree, next), () => { setMode('turn'); commit(next); });
+    change(() => ensureDraft(activeTree, next), () => { setMode('turn'); audio.playLights(); commit(next); });
   };
   for (const [key, label] of Object.entries({ all: 'All', ball: 'Baubles', hanging: 'Hanging', topper: 'Toppers', floor: 'Floor' })) {
     const button = document.createElement('button');
@@ -563,6 +863,7 @@ function bind() {
     button.textContent = label;
     button.setAttribute('aria-pressed', key === 'all');
     button.onclick = () => {
+      activeCategory = key;
       for (const tab of $('#category').children) tab.setAttribute('aria-pressed', tab === button);
       let count = 0;
       for (const tile of $('#palette').children) {
@@ -570,24 +871,28 @@ function bind() {
         if (!tile.hidden) count++;
       }
       $('#palette').scrollTo(0, 0);
-      $('#material-count').textContent = count + ' items';
+      $('#material-count').textContent = t().itemsCount(count);
     };
     $('#category').append(button);
   }
-  $('#material-count').textContent = Object.keys(items).length + ' items';
   for (const [key, { name }] of Object.entries(items)) {
     const b = pictureButton('item-option', key);
-    b.append(name); b.dataset.key = key;
+    const span = document.createElement('span');
+    span.className = 'item-label';
+    span.textContent = name;
+    b.append(span);
+    b.dataset.key = key;
     b.onclick = () => {
-      if (!models[key]) say('Loading ' + name.toLowerCase() + '…');
+      if (!models[key]) say(t().hintLoadingItem(itemName(key)));
       change(() => loadItem(key), () => {
         mode = 'edit'; material = key; selected = null;
         tray.picked(key);
+        const displayName = itemName(key);
         say(type(key) === 'top'
-          ? 'Tap the glowing spot at the treetop, or drag to orbit.'
+          ? t().hintPlaceTop
           : type(key) === 'floor'
-            ? 'Tap a glowing spot on the tree skirt, or drag to orbit.'
-            : 'Tap a glowing spot to hang ' + name.toLowerCase() + ', or drag to orbit.');
+            ? t().hintPlaceFloor
+            : t().hintPlaceBranch(displayName));
         controls();
       });
     };
@@ -599,11 +904,18 @@ function bind() {
   $('#redo').onclick = () => history(future, past);
   $('#remove').onclick = () => {
     const old = selected; selected = null;
+    audio.playSoftClick();
     commit({ ...draft, items: draft.items.filter(i => i.site !== old) });
-    say('Ornament removed.');
+    say(t().hintRemoved);
   };
   for (const b of document.querySelectorAll('[data-light]'))
-    b.onclick = () => { if (draft.light !== b.dataset.light) commit({ ...draft, light: b.dataset.light }); };
+    b.onclick = () => {
+      if (draft.light !== b.dataset.light) {
+        if (b.dataset.light !== 'off') audio.playLights();
+        else audio.playSoftClick();
+        commit({ ...draft, light: b.dataset.light });
+      }
+    };
   $('#more').onclick = () => { targetZoom = clamp(targetZoom * 1.18, 0.8, 1.85); };
   $('#less').onclick = () => { targetZoom = clamp(targetZoom / 1.18, 0.8, 1.85); };
   $('#home').onclick = () => {
@@ -612,25 +924,39 @@ function bind() {
     targetElevation = 0.115;
     targetAzimuth = 0;
   };
-  $('#auto-orbit').onclick = () => autoOrbit ? stopOrbit() : startOrbit();
+  const toggleOrbit = () => (autoOrbit ? stopOrbit() : startOrbit());
+  $('#auto-orbit').onclick = toggleOrbit;
+  if ($('#fs-orbit')) $('#fs-orbit').onclick = toggleOrbit;
+
+  if ($('#fs-light')) {
+    $('#fs-light').onclick = () => {
+      const nextLight = lights[(lights.indexOf(draft.light) + 1) % lights.length];
+      if (nextLight !== 'off') audio.playLights();
+      else audio.playSoftClick();
+      commit({ ...draft, light: nextLight });
+    };
+  }
+
+  const toggleSound = async () => {
+    await audio.toggle();
+    syncAudioButtons();
+  };
+  if ($('#toggle-audio')) $('#toggle-audio').onclick = toggleSound;
+  if ($('#fs-audio')) $('#fs-audio').onclick = toggleSound;
+  if ($('#share-tree')) $('#share-tree').onclick = copyShareLink;
+  if ($('#toggle-lang')) $('#toggle-lang').onclick = () => { i18n.toggle(); applyLanguage(); };
+
   $('#show-help').addEventListener('click', stopOrbit);
   $('#show-works').addEventListener('click', stopOrbit);
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopOrbit(); });
-  $('#photo').onclick = () => {
-    stopOrbit();
-    guides.setVisible(false);
-    renderer.render(scene, camera);
-    canvas.toBlob(blob => {
-      if (!blob) { say('Could not create the photo. Please try again.'); return; }
-      const url = URL.createObjectURL(blob), a = document.createElement('a');
-      a.href = url; a.download = 'christmas tree game - 3D.png'; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-    }, 'image/png');
-    refreshSpots();
-  };
+
+  const photoCard = setupPhotoCardDialog();
+  $('#photo').onclick = photoCard.open;
+  if ($('#fs-photo')) $('#fs-photo').onclick = photoCard.open;
 }
 
 let lastNow = 0;
+let lastRenderTime = 0;
 let animClock = 0;
 let firstRendered = false;
 
@@ -647,23 +973,75 @@ function animate(now) {
     targetAzimuth += dt * 0.28;
   }
 
-  // Silky exponential camera damping
   const damp = 1 - Math.exp(-dt * 11.5);
   const prevAz = azimuth, prevEl = elevation, prevZ = zoom;
   azimuth += (targetAzimuth - azimuth) * damp;
   elevation += (targetElevation - elevation) * damp;
   zoom += (targetZoom - zoom) * damp;
 
-  if (
+  const cameraMoving =
     Math.abs(azimuth - prevAz) > 1e-5 ||
     Math.abs(elevation - prevEl) > 1e-5 ||
-    Math.abs(zoom - prevZ) > 1e-5 ||
-    !firstRendered
+    Math.abs(zoom - prevZ) > 1e-5;
+
+  // Mobile power-saving throttle (~30fps when idle, instant 60fps when interacting/orbiting/animating!)
+  if (
+    isMobileDevice &&
+    firstRendered &&
+    !cameraMoving &&
+    !autoOrbit &&
+    !gesture &&
+    ornamentAnims.size === 0 &&
+    now - lastRenderTime < 32
   ) {
+    return;
+  }
+  lastRenderTime = now;
+
+  if (cameraMoving || !firstRendered) {
     syncCamera(false);
   }
 
-  // Advance living atmosphere (paused/slowed smoothly if user prefers reduced motion)
+  // Smooth lighting crossfade between scenes
+  if (lightingTarget) {
+    const ld = 1 - Math.exp(-dt * 7.5);
+    hemiLight.color.lerp(lightingTarget.hemiSky, ld);
+    hemiLight.groundColor.lerp(lightingTarget.hemiGround, ld);
+    hemiLight.intensity += (lightingTarget.hemiIntensity - hemiLight.intensity) * ld;
+    keyLight.color.lerp(lightingTarget.keyColor, ld);
+    keyLight.intensity += (lightingTarget.keyIntensity - keyLight.intensity) * ld;
+    keyLight.position.lerp(lightingTarget.keyPos, ld);
+    rimLight.color.lerp(lightingTarget.rimColor, ld);
+    rimLight.intensity += (lightingTarget.rimIntensity - rimLight.intensity) * ld;
+    rimLight.position.lerp(lightingTarget.rimPos, ld);
+    fillLight.color.lerp(lightingTarget.fillColor, ld);
+    fillLight.intensity += (lightingTarget.fillIntensity - fillLight.intensity) * ld;
+    fillLight.position.lerp(lightingTarget.fillPos, ld);
+    renderer.toneMappingExposure += (lightingTarget.exposure - renderer.toneMappingExposure) * ld;
+  }
+
+  // Tactile placement spring pop-in & damped pendulum sway
+  if (ornamentAnims.size > 0) {
+    const nowSec = now / 1000;
+    for (const [model, anim] of ornamentAnims.entries()) {
+      const elapsed = nowSec - anim.start;
+      const p = Math.min(1, elapsed / 0.65);
+      // Elastic ease-out scale
+      const overshoot = 1 - Math.exp(-elapsed * 8.5) * Math.cos(elapsed * 16.0);
+      model.scale.setScalar(clamp(overshoot, 0.05, 1.12));
+      // Gentle damped pendulum sway for hanging ornaments
+      if (anim.kind === 'branch') {
+        const sway = Math.exp(-elapsed * 5.2) * Math.sin(elapsed * 15.0) * 0.22;
+        model.rotation.z = sway;
+      }
+      if (p >= 1) {
+        model.scale.setScalar(1);
+        model.rotation.z = 0;
+        ornamentAnims.delete(model);
+      }
+    }
+  }
+
   if (!reducedMotion.matches) {
     animClock += dt;
     worlds.update(animClock);
@@ -680,7 +1058,8 @@ function animate(now) {
 
 async function start() {
   renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(1.85, window.devicePixelRatio || 1));
+  const maxDpr = isMobileDevice ? 1.35 : 1.85;
+  renderer.setPixelRatio(Math.min(maxDpr, window.devicePixelRatio || 1));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.outputColorSpace = T.SRGBColorSpace;
@@ -699,10 +1078,21 @@ async function start() {
   guides = createInteractionGuides(scene, sites.length);
   setupLighting();
 
-  const key = loadDrafts();
+  let key = loadDrafts();
+  let loadedFromShare = false;
+  const shared = decodeShareHash(location.hash, itemKeys);
+  if (shared && Object.hasOwn(trees, shared.tree)) {
+    const validated = restoreTree(shared.tree, shared.draft);
+    drafts[shared.tree] = validated;
+    key = shared.tree;
+    loadedFromShare = true;
+  }
+
   await ensureDraft(key, drafts[key]);
   bind();
-  switchTree(key);
+  switchTree(key, false);
+  rebuild(true);
+  applyLanguage();
 
   setupWorks({
     mode: '3d',
@@ -713,22 +1103,25 @@ async function start() {
       if (activeTree !== work.tree) switchTree(work.tree, false);
       mode = 'turn'; material = null; selected = null;
       commit(work.draft);
-      say('Work opened. Pick an ornament to keep decorating.');
+      say(t().hintWorkOpened);
     }),
   });
 
-  for (const selector of ['#turn', '#edit', '#photo', '#show-works', '#auto-orbit', '#fullscreen']) {
+  for (const selector of ['#turn', '#edit', '#photo', '#show-works', '#auto-orbit', '#fullscreen', '#share-tree', '#toggle-audio']) {
     const el = $(selector);
     if (el) el.disabled = false;
   }
-  const fullscreen = setupFullscreen($('#fullscreen'), () => syncCamera(true));
+
+  fullscreen = setupFullscreen($('#fullscreen'), () => syncCamera(true));
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && mode === 'edit' && !fullscreen.isActive() && !document.querySelector('dialog[open]')) {
       setMode('turn');
     }
   });
+
   syncCamera(true);
   setMode('turn');
+  if (loadedFromShare) say(t().hintSharedLoaded);
   new ResizeObserver(() => syncCamera(true)).observe(canvas);
   requestAnimationFrame(animate);
 
@@ -742,7 +1135,7 @@ $('#show-help').onclick = () => $('#help-dialog').showModal();
 
 start().catch(error => {
   console.error(error);
-  $('#loading-message').textContent = 'The 3D studio could not load.';
+  $('#loading-message').textContent = t().loadingFailed;
   $('.loading-spinner').hidden = true;
   $('#retry-loading').hidden = false;
 });

@@ -1,20 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#511d27">
-  <meta name="description" content="Pick a tree in a snowy cottage, hang the ornaments you like, and save a photo of your Christmas tree.">
+  <meta name="description" content="Pick a tree in a snowy cottage, hang the ornaments you like, and save a photo or holiday card of your 3D Christmas tree.">
   <title>christmas tree game · 3D Ornament Studio</title>
   <link rel="icon" href="assets/star.webp">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="studio/studio.css">
-  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-WMSNZBZ6"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-  </script>
   <script type="module" src="studio/studio.js"></script>
 </head>
 <body>
@@ -26,9 +20,15 @@
     <div class="masthead-actions">
       <span id="saved" class="save-state" aria-live="polite"></span>
       <a class="studio-link" href="2d.html">2D studio</a>
+      <button type="button" id="toggle-lang" class="icon-pill" title="Switch language">EN</button>
+      <button type="button" id="toggle-audio" class="icon-pill" aria-pressed="false" title="Ambience" aria-label="Ambience" disabled>
+        <svg class="icon-off" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/></svg>
+        <svg class="icon-on" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>
+      </button>
+      <button type="button" id="share-tree" class="help-button" disabled>Share</button>
       <button type="button" id="show-help" class="help-button" aria-haspopup="dialog" aria-controls="help-dialog">How to play</button>
       <button type="button" id="show-works" class="help-button works-button" aria-haspopup="dialog" aria-controls="works-dialog" disabled>Works</button>
-      <button type="button" id="photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo</button>
+      <button type="button" id="photo" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg><span class="btn-label">Photo</span></button>
     </div>
   </header>
 
@@ -76,6 +76,15 @@
           <button id="turn" type="button" disabled>Orbit view</button>
           <button id="edit" type="button" disabled>Edit ornaments</button>
         </div>
+        <div class="fs-dock glass" aria-label="Fullscreen quick controls">
+          <button type="button" id="fs-orbit" aria-pressed="false" title="Auto orbit" aria-label="Auto orbit"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg></button>
+          <button type="button" id="fs-light" title="Lights" aria-label="Lights"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2M5.6 5.6l1.4 1.4M18.4 5.6 17 7M9 18h6M10 21h4M12 8a4 4 0 0 0-2 7.5V17h4v-1.5A4 4 0 0 0 12 8Z"/></svg></button>
+          <button type="button" id="fs-audio" aria-pressed="false" title="Ambience" aria-label="Ambience">
+            <svg class="icon-off" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/></svg>
+            <svg class="icon-on" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+          </button>
+          <button type="button" id="fs-photo" title="Photo" aria-label="Photo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 7h3l1.5-2h5L16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        </div>
         <div class="scene-bottom">
           <button type="button" class="remove-item" id="remove" hidden>Remove ornament</button>
           <div class="glass zoom-controls" aria-label="Canvas zoom">
@@ -109,13 +118,36 @@
 
   <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
     <div class="photo-heading"><h2 id="help-title">How to play</h2><form method="dialog"><button class="close" aria-label="Close">×</button></form></div>
-    <ol class="help-steps">
-      <li><h3>Choose your tree and room</h3><p>Start with an empty tree or a starter layout. Each tree keeps its own decorations.</p></li>
-      <li><h3>Decorate from any side</h3><p>Pick an ornament, drag anywhere to orbit around the tree, and tap a glowing spot to place it. Pinch or scroll to zoom, or use Fullscreen for an immersive view.</p></li>
-      <li><h3>Admire and save your tree</h3><p>Use Auto orbit to admire every side. Tap the scene to pause, then use Photo to save that view. Use Works to copy or download an editable project.</p></li>
-    </ol>
+    <ol class="help-steps"></ol>
     <form method="dialog" class="help-actions"><button class="primary">Back to studio</button></form>
   </dialog>
+
+  <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
+    <div class="photo-heading">
+      <h2 id="photo-title">Photo &amp; Holiday Card</h2>
+      <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    </div>
+    <div class="photo-paper"><canvas id="photo-preview" aria-label="Photo preview"></canvas></div>
+    <div class="photo-toolbar">
+      <div class="segmented" aria-label="Photo style">
+        <button type="button" data-photo-style="clean" aria-pressed="false">Clean photo</button>
+        <button type="button" data-photo-style="card" aria-pressed="true">Holiday card</button>
+      </div>
+      <button type="button" id="download-photo" class="primary">Save PNG</button>
+    </div>
+    <div id="card-options" class="card-options">
+      <div class="segmented" aria-label="Card aspect ratio">
+        <button type="button" data-photo-ratio="portrait" aria-pressed="true">Portrait 3:4</button>
+        <button type="button" data-photo-ratio="wide" aria-pressed="false">Landscape</button>
+      </div>
+      <label class="card-greeting-field">
+        <span id="card-greeting-label">Card greeting</span>
+        <input type="text" id="card-greeting" maxlength="42" data-auto="true">
+      </label>
+    </div>
+    <p id="photo-status" class="photo-status" aria-live="polite" hidden></p>
+  </dialog>
+
   <dialog id="works-dialog" class="help-dialog" aria-labelledby="works-title">
     <div class="photo-heading"><h2 id="works-title">Your trees</h2><form method="dialog"><button class="close" aria-label="Close">×</button></form></div>
     <div class="works-row">
