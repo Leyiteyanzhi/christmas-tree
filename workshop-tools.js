@@ -35,7 +35,7 @@ export function setupTray(panel, palette, keyOf, showAll) {
         update(false);
       }
       order();
-      if (narrow.matches) {
+      if (narrow.matches && !document.body.classList.contains('is-fullscreen')) {
         palette.scrollLeft = 0;
         const picture = document.querySelector('.picture').getBoundingClientRect();
         const covered = picture.bottom - panel.getBoundingClientRect().top + 8;
@@ -203,8 +203,15 @@ export function setupFullscreen(button, onChange) {
   document.addEventListener('webkitfullscreenchange', onNativeChange);
 
   // Escape exits CSS-fallback fullscreen cleanly when native fullscreen isn't active
+  // (unless an in-fullscreen floating popover is open — let it close first!)
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && active && !nativeEl() && !document.querySelector('dialog[open]')) {
+    if (
+      event.key === 'Escape' &&
+      active &&
+      !nativeEl() &&
+      !document.body.classList.contains('fs-palette-open') &&
+      !document.querySelector('dialog[open]')
+    ) {
       event.preventDefault();
       event.stopImmediatePropagation();
       exit();

@@ -424,6 +424,8 @@ function controls() {
   $('#redo').disabled = !future.length;
   $('#remove').disabled = selected == null;
   $('#remove').hidden = selected == null;
+  const fsOrn = $('#fs-ornaments');
+  if (fsOrn) fsOrn.classList.toggle('has-material', Boolean(material));
   refreshSpots();
 }
 
@@ -589,6 +591,18 @@ function pictureButton(className, asset) {
   return button;
 }
 
+function setFullscreenPalette(open) {
+  const show = Boolean(open && document.body.classList.contains('is-fullscreen'));
+  document.body.classList.toggle('fs-palette-open', show);
+  const btn = $('#fs-ornaments');
+  if (btn) {
+    btn.setAttribute('aria-pressed', String(show));
+    const label = show ? t().closePanel : t().pickOrnament;
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  }
+}
+
 function syncAudioButtons() {
   const on = audio.isEnabled();
   const label = on ? t().soundOn : t().soundOff;
@@ -709,6 +723,9 @@ function applyLanguage() {
 
   syncOrbitButtons();
   syncAudioButtons();
+  const fsClose = $('#fs-close-palette');
+  if (fsClose) fsClose.setAttribute('aria-label', tr.closePanel);
+  setFullscreenPalette(document.body.classList.contains('fs-palette-open'));
   if ($('#saved').textContent) $('#saved').textContent = tr.draftSaved;
   if (draft) renderLights();
   if (mode === 'turn' && !autoOrbit) say(tr.hintOrbit);
@@ -887,6 +904,11 @@ function bind() {
       change(() => loadItem(key), () => {
         mode = 'edit'; material = key; selected = null;
         tray.picked(key);
+        // On small/mobile screens in fullscreen, auto-collapse the ornament popover right after picking
+        // so the full 3D tree is immediately unobstructed for orbiting and hanging!
+        if (document.body.classList.contains('fs-palette-open') && matchMedia('(max-width: 780px), (max-height: 520px)').matches) {
+          setFullscreenPalette(false);
+        }
         const displayName = itemName(key);
         say(type(key) === 'top'
           ? t().hintPlaceTop
@@ -927,6 +949,8 @@ function bind() {
   const toggleOrbit = () => (autoOrbit ? stopOrbit() : startOrbit());
   $('#auto-orbit').onclick = toggleOrbit;
   if ($('#fs-orbit')) $('#fs-orbit').onclick = toggleOrbit;
+  if ($('#fs-ornaments')) $('#fs-ornaments').onclick = () => setFullscreenPalette(!document.body.classList.contains('fs-palette-open'));
+  if ($('#fs-close-palette')) $('#fs-close-palette').onclick = () => setFullscreenPalette(false);
 
   if ($('#fs-light')) {
     $('#fs-light').onclick = () => {
@@ -1112,9 +1136,17 @@ async function start() {
     if (el) el.disabled = false;
   }
 
-  fullscreen = setupFullscreen($('#fullscreen'), () => syncCamera(true));
+  fullscreen = setupFullscreen($('#fullscreen'), () => {
+    if (!document.body.classList.contains('is-fullscreen')) setFullscreenPalette(false);
+    syncCamera(true);
+  });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && mode === 'edit' && !fullscreen.isActive() && !document.querySelector('dialog[open]')) {
+    if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+    if (document.body.classList.contains('fs-palette-open')) {
+      setFullscreenPalette(false);
+      return;
+    }
+    if (mode === 'edit' && !fullscreen.isActive()) {
       setMode('turn');
     }
   });

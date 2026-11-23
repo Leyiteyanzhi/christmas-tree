@@ -129,6 +129,115 @@ body.is-fullscreen .fs-dock { display: flex; }
 .fs-dock .icon-on { display: none; }
 .fs-dock button[aria-pressed="true"] .icon-on { display: block; }
 .fs-dock button[aria-pressed="true"] .icon-off { display: none; }
+.fs-dock button.has-material::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffe08a;
+  box-shadow: 0 0 8px #ffcf66;
+}
+.fs-dock button { position: relative; }
+
+/* Fullscreen floating ornament popover (zoom-in panel on PC & compact sheet on mobile!) */
+.fs-close-palette {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: var(--evergreen);
+  font-size: 22px;
+  line-height: 1;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 6px;
+  margin-left: auto;
+}
+.fs-close-palette:hover { background: rgba(81, 29, 39, 0.1); }
+
+@keyframes fs-popover-in {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+body.is-fullscreen.fs-palette-open .workshop .materials {
+  position: fixed;
+  z-index: 120;
+  left: calc(14px + env(safe-area-inset-left));
+  bottom: calc(66px + env(safe-area-inset-bottom));
+  right: auto;
+  top: auto;
+  width: min(356px, calc(100vw - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: min(62dvh, 470px);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 13px;
+  background: rgba(248, 236, 211, 0.94);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  border: 1px solid #e2b872;
+  border-radius: 14px;
+  box-shadow: 0 22px 54px rgba(8, 6, 10, 0.56), inset 0 0 0 2px rgba(154, 101, 51, 0.14);
+  transform-origin: bottom left;
+  animation: fs-popover-in 190ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+body.is-fullscreen.fs-palette-open .materials .tray-toggle { display: none; }
+body.is-fullscreen.fs-palette-open .materials .fs-close-palette { display: inline-grid; place-items: center; }
+body.is-fullscreen.fs-palette-open .materials .materials-heading {
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+body.is-fullscreen.fs-palette-open .materials .materials-heading h2 { margin: 0; font-size: 17px; }
+body.is-fullscreen.fs-palette-open .materials .material-count { margin-left: 0; }
+body.is-fullscreen.fs-palette-open .materials .categories {
+  display: flex !important;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+body.is-fullscreen.fs-palette-open .materials .item-options {
+  display: grid !important;
+  grid-auto-flow: row !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: -2px;
+  padding: 2px;
+}
+body.is-fullscreen.fs-palette-open .materials .item-option {
+  order: 0 !important;
+  min-height: 76px;
+}
+
+@media (max-width: 780px) {
+  body.is-fullscreen.fs-palette-open .workshop .materials {
+    left: calc(10px + env(safe-area-inset-left));
+    right: calc(10px + env(safe-area-inset-right));
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(48dvh, 360px);
+    transform-origin: bottom center;
+  }
+  body.is-fullscreen.fs-palette-open .materials .item-options {
+    grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)) !important;
+  }
+}
+@media (max-height: 480px) {
+  body.is-fullscreen.fs-palette-open .workshop .materials {
+    width: min(330px, 56vw);
+    right: auto;
+    max-height: 62dvh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.is-fullscreen.fs-palette-open .workshop .materials { animation: none; }
+}
 
 /* Photo & Holiday Card preview dialog enhancements */
 .photo-toolbar {
